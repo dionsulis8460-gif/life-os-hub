@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 const Estudos = () => {
   const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes } = useStudy();
-  const [selectedSubject, setSelectedSubject] = useState(SUBJECTS[0].label);
+  const [selectedSubject, setSelectedSubject] = useState<string>(SUBJECTS[0].label);
   const pomodoro = usePomodoro(25, 5);
 
   const handleFinishSession = () => {
