@@ -183,3 +183,11 @@ function Financas() {
     </div>
   );
 }
+
+const FinancasPage = () => (
+  <ModuleGate module="financas" moduleName="Finanças">
+    <Financas />
+  </ModuleGate>
+);
+
+export default FinancasPage;
