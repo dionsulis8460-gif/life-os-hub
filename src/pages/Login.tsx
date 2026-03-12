@@ -84,6 +84,9 @@ const Login = () => {
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </motion.div>
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-xs text-primary hover:underline">Esqueci minha senha</Link>
+          </div>
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
