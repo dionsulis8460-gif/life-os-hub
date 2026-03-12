@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ModuleGate from "@/components/layout/ModuleGate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -498,4 +499,10 @@ const Estudos = () => {
   );
 };
 
-export default Estudos;
+const EstudosPage = () => (
+  <ModuleGate module="estudos" moduleName="Estudos">
+    <Estudos />
+  </ModuleGate>
+);
+
+export default EstudosPage;

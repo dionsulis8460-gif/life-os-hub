@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ModuleGate from "@/components/layout/ModuleGate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -367,4 +368,10 @@ const Metas = () => {
   );
 };
 
-export default Metas;
+const MetasPage = () => (
+  <ModuleGate module="metas" moduleName="Metas">
+    <Metas />
+  </ModuleGate>
+);
+
+export default MetasPage;

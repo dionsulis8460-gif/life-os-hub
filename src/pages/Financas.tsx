@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModuleGate from "@/components/layout/ModuleGate";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ const CHART_COLORS = [
   'hsl(30, 80%, 55%)',
 ];
 
-export default function Financas() {
+function Financas() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const {
     currentMonth,
@@ -182,3 +183,11 @@ export default function Financas() {
     </div>
   );
 }
+
+const FinancasPage = () => (
+  <ModuleGate module="financas" moduleName="Finanças">
+    <Financas />
+  </ModuleGate>
+);
+
+export default FinancasPage;

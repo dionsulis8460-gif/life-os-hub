@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ModuleGate from "@/components/layout/ModuleGate";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Brain, Flame, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -131,4 +132,10 @@ const Habitos = () => {
   );
 };
 
-export default Habitos;
+const HabitosPage = () => (
+  <ModuleGate module="habitos" moduleName="Hábitos">
+    <Habitos />
+  </ModuleGate>
+);
+
+export default HabitosPage;

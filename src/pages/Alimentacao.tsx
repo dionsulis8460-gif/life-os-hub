@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ModuleGate from "@/components/layout/ModuleGate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Flame, Beef, Wheat, Droplets, Trash2 } from "lucide-react";
@@ -212,4 +213,10 @@ const Alimentacao = () => {
   );
 };
 
-export default Alimentacao;
+const AlimentacaoPage = () => (
+  <ModuleGate module="alimentacao" moduleName="Alimentação">
+    <Alimentacao />
+  </ModuleGate>
+);
+
+export default AlimentacaoPage;
