@@ -499,4 +499,10 @@ const Estudos = () => {
   );
 };
 
-export default Estudos;
+const EstudosPage = () => (
+  <ModuleGate module="estudos" moduleName="Estudos">
+    <Estudos />
+  </ModuleGate>
+);
+
+export default EstudosPage;

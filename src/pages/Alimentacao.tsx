@@ -213,4 +213,10 @@ const Alimentacao = () => {
   );
 };
 
-export default Alimentacao;
+const AlimentacaoPage = () => (
+  <ModuleGate module="alimentacao" moduleName="Alimentação">
+    <Alimentacao />
+  </ModuleGate>
+);
+
+export default AlimentacaoPage;

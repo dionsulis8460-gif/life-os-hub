@@ -368,4 +368,10 @@ const Metas = () => {
   );
 };
 
-export default Metas;
+const MetasPage = () => (
+  <ModuleGate module="metas" moduleName="Metas">
+    <Metas />
+  </ModuleGate>
+);
+
+export default MetasPage;

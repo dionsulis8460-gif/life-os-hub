@@ -132,4 +132,10 @@ const Habitos = () => {
   );
 };
 
-export default Habitos;
+const HabitosPage = () => (
+  <ModuleGate module="habitos" moduleName="Hábitos">
+    <Habitos />
+  </ModuleGate>
+);
+
+export default HabitosPage;
