@@ -6,7 +6,18 @@ import { ptBR } from 'date-fns/locale';
 export function useSubjects() {
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     const saved = localStorage.getItem('study-subjects');
-    return saved ? JSON.parse(saved) : DEFAULT_SUBJECTS;
+    if (saved) {
+      // Migrate old format (topics as string[]) to new format
+      const parsed = JSON.parse(saved);
+      return parsed.map((s: any) => ({
+        ...s,
+        completed: s.completed ?? false,
+        topics: (s.topics || []).map((t: any) =>
+          typeof t === 'string' ? { name: t, completed: false } : t
+        ),
+      }));
+    }
+    return DEFAULT_SUBJECTS;
   });
 
   useEffect(() => {
@@ -14,16 +25,28 @@ export function useSubjects() {
   }, [subjects]);
 
   const addSubject = useCallback((label: string, color: string) => {
-    setSubjects(prev => [...prev, { id: crypto.randomUUID(), label, color, topics: [] }]);
+    setSubjects(prev => [...prev, { id: crypto.randomUUID(), label, color, topics: [], completed: false }]);
   }, []);
 
   const deleteSubject = useCallback((id: string) => {
     setSubjects(prev => prev.filter(s => s.id !== id));
   }, []);
 
-  const addTopic = useCallback((subjectId: string, topic: string) => {
+  const toggleSubjectCompleted = useCallback((id: string) => {
+    setSubjects(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      const newCompleted = !s.completed;
+      return {
+        ...s,
+        completed: newCompleted,
+        topics: s.topics.map(t => ({ ...t, completed: newCompleted })),
+      };
+    }));
+  }, []);
+
+  const addTopic = useCallback((subjectId: string, topicName: string) => {
     setSubjects(prev => prev.map(s =>
-      s.id === subjectId ? { ...s, topics: [...s.topics, topic] } : s
+      s.id === subjectId ? { ...s, topics: [...s.topics, { name: topicName, completed: false }], completed: false } : s
     ));
   }, []);
 
@@ -33,7 +56,18 @@ export function useSubjects() {
     ));
   }, []);
 
-  return { subjects, addSubject, deleteSubject, addTopic, deleteTopic };
+  const toggleTopicCompleted = useCallback((subjectId: string, topicIndex: number) => {
+    setSubjects(prev => prev.map(s => {
+      if (s.id !== subjectId) return s;
+      const newTopics = s.topics.map((t, i) =>
+        i === topicIndex ? { ...t, completed: !t.completed } : t
+      );
+      const allDone = newTopics.length > 0 && newTopics.every(t => t.completed);
+      return { ...s, topics: newTopics, completed: allDone };
+    }));
+  }, []);
+
+  return { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted };
 }
 
 export function useStudy() {
@@ -86,8 +120,9 @@ export function useStudy() {
   return { sessions, addSession, deleteSession, weekSessions, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes };
 }
 
-export function usePomodoro(workMinutes = 25, breakMinutes = 5) {
-  const [timeLeft, setTimeLeft] = useState(workMinutes * 60);
+export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
+  const [workMinutes, setWorkMinutes] = useState(initialWorkMinutes);
+  const [timeLeft, setTimeLeft] = useState(initialWorkMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
@@ -127,9 +162,16 @@ export function usePomodoro(workMinutes = 25, breakMinutes = 5) {
     setCompletedPomodoros(0);
   }, [workMinutes]);
 
+  const changeWorkMinutes = useCallback((mins: number) => {
+    setWorkMinutes(mins);
+    if (!isRunning && !isBreak) {
+      setTimeLeft(mins * 60);
+    }
+  }, [isRunning, isBreak]);
+
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  return { display, isRunning, isBreak, toggle, reset, progress, completedPomodoros, timeLeft, totalSeconds };
+  return { display, isRunning, isBreak, toggle, reset, progress, completedPomodoros, timeLeft, totalSeconds, workMinutes, changeWorkMinutes };
 }

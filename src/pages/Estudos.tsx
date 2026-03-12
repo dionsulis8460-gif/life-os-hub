@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { BookOpen, Play, Pause, RotateCcw, Clock, Flame, Timer, Trash2, Plus, X, ChevronDown, ChevronRight, GraduationCap } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BookOpen, Play, Pause, RotateCcw, Clock, Flame, Timer, Trash2, Plus, X, ChevronDown, ChevronRight, GraduationCap, CheckCircle2 } from "lucide-react";
 import { useStudy, usePomodoro, useSubjects } from "@/hooks/useStudy";
-import { DEFAULT_COLORS } from "@/types/study";
+import { DEFAULT_COLORS, DURATION_OPTIONS } from "@/types/study";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -14,9 +16,10 @@ import { toast } from "sonner";
 
 const Estudos = () => {
   const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes } = useStudy();
-  const { subjects, addSubject, deleteSubject, addTopic, deleteTopic } = useSubjects();
+  const { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted } = useSubjects();
   const [selectedSubject, setSelectedSubject] = useState<string>(subjects[0]?.label || '');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
+  const [useTimer, setUseTimer] = useState(true);
   const pomodoro = usePomodoro(25, 5);
 
   // Subject dialog
@@ -28,6 +31,9 @@ const Estudos = () => {
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [newTopicName, setNewTopicName] = useState('');
   const [showSubjectsPanel, setShowSubjectsPanel] = useState(false);
+
+  // Free session tracking
+  const [freeSessionMinutes, setFreeSessionMinutes] = useState('');
 
   const currentSubject = subjects.find(s => s.label === selectedSubject);
   const currentTopics = currentSubject?.topics || [];
@@ -52,25 +58,43 @@ const Estudos = () => {
   };
 
   const handleFinishSession = () => {
-    if (pomodoro.completedPomodoros === 0 && pomodoro.timeLeft === 25 * 60) {
-      toast.error("Inicie pelo menos um pomodoro antes de salvar.");
-      return;
+    if (useTimer) {
+      if (pomodoro.completedPomodoros === 0 && pomodoro.timeLeft === pomodoro.workMinutes * 60) {
+        toast.error("Inicie pelo menos um pomodoro antes de salvar.");
+        return;
+      }
+      const elapsed = pomodoro.completedPomodoros * pomodoro.workMinutes + Math.floor((pomodoro.workMinutes * 60 - pomodoro.timeLeft) / 60);
+      addSession({
+        subject: selectedSubject,
+        topic: selectedTopic && selectedTopic !== '__none__' ? selectedTopic : undefined,
+        duration: Math.max(elapsed, 1),
+        date: new Date().toISOString(),
+        type: 'pomodoro',
+        completedPomodoros: pomodoro.completedPomodoros,
+      });
+      pomodoro.reset();
+    } else {
+      const mins = parseInt(freeSessionMinutes);
+      if (!mins || mins <= 0) {
+        toast.error("Informe a duração da sessão.");
+        return;
+      }
+      addSession({
+        subject: selectedSubject,
+        topic: selectedTopic && selectedTopic !== '__none__' ? selectedTopic : undefined,
+        duration: mins,
+        date: new Date().toISOString(),
+        type: 'free',
+      });
+      setFreeSessionMinutes('');
     }
-    const elapsed = pomodoro.completedPomodoros * 25 + Math.floor((25 * 60 - pomodoro.timeLeft) / 60);
-    addSession({
-      subject: selectedSubject,
-      topic: selectedTopic || undefined,
-      duration: Math.max(elapsed, 1),
-      date: new Date().toISOString(),
-      type: 'pomodoro',
-      completedPomodoros: pomodoro.completedPomodoros,
-    });
-    pomodoro.reset();
     toast.success("Sessão registrada!");
   };
 
   const circumference = 2 * Math.PI * 90;
   const strokeDashoffset = circumference - (pomodoro.progress / 100) * circumference;
+
+  const completedTopicsCount = (subj: typeof subjects[0]) => subj.topics.filter(t => t.completed).length;
 
   return (
     <div className="space-y-6">
@@ -141,7 +165,7 @@ const Estudos = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 {subjects.map(subject => (
-                  <div key={subject.id} className="rounded-lg border border-border bg-secondary/30">
+                  <div key={subject.id} className={`rounded-lg border transition-colors ${subject.completed ? 'border-[hsl(152,69%,53%)]/40 bg-[hsl(152,69%,53%)]/5' : 'border-border bg-secondary/30'}`}>
                     <div
                       className="flex items-center justify-between p-3 cursor-pointer hover:bg-secondary/50 rounded-lg transition-colors"
                       onClick={() => setExpandedSubject(expandedSubject === subject.id ? null : subject.id)}
@@ -149,15 +173,29 @@ const Estudos = () => {
                       <div className="flex items-center gap-3">
                         {expandedSubject === subject.id ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: subject.color }} />
-                        <span className="font-medium text-sm">{subject.label}</span>
-                        <span className="text-xs text-muted-foreground">({subject.topics.length} assuntos)</span>
+                        <span className={`font-medium text-sm ${subject.completed ? 'line-through text-muted-foreground' : ''}`}>{subject.label}</span>
+                        {subject.topics.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({completedTopicsCount(subject)}/{subject.topics.length} concluídos)
+                          </span>
+                        )}
+                        {subject.completed && <CheckCircle2 className="h-4 w-4 text-[hsl(152,69%,53%)]" />}
                       </div>
-                      <Button
-                        variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={(e) => { e.stopPropagation(); deleteSubject(subject.id); toast.success("Matéria removida."); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7"
+                          title={subject.completed ? "Desmarcar matéria" : "Concluir matéria"}
+                          onClick={(e) => { e.stopPropagation(); toggleSubjectCompleted(subject.id); }}
+                        >
+                          <CheckCircle2 className={`h-3.5 w-3.5 ${subject.completed ? 'text-[hsl(152,69%,53%)]' : 'text-muted-foreground'}`} />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); deleteSubject(subject.id); toast.success("Matéria removida."); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </div>
                     <AnimatePresence>
                       {expandedSubject === subject.id && (
@@ -168,12 +206,24 @@ const Estudos = () => {
                           className="px-3 pb-3 overflow-hidden"
                         >
                           <div className="pl-10 space-y-1.5">
+                            {subject.topics.length === 0 && (
+                              <p className="text-xs text-muted-foreground py-2">Nenhum assunto adicionado.</p>
+                            )}
                             {subject.topics.map((topic, idx) => (
                               <div key={idx} className="flex items-center justify-between py-1.5 px-3 rounded-md bg-secondary/50 group">
-                                <span className="text-sm">{topic}</span>
+                                <div className="flex items-center gap-2.5">
+                                  <Checkbox
+                                    checked={topic.completed}
+                                    onCheckedChange={() => toggleTopicCompleted(subject.id, idx)}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className={`text-sm ${topic.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                    {topic.name}
+                                  </span>
+                                </div>
                                 <Button
                                   variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                                  onClick={() => { deleteTopic(subject.id, idx); }}
+                                  onClick={() => deleteTopic(subject.id, idx)}
                                 >
                                   <X className="h-3 w-3 text-muted-foreground" />
                                 </Button>
@@ -204,15 +254,22 @@ const Estudos = () => {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pomodoro Timer */}
+        {/* Study session card */}
         <Card className="overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              Pomodoro
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                Sessão de estudo
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{useTimer ? 'Com timer' : 'Sem timer'}</span>
+                <Switch checked={useTimer} onCheckedChange={setUseTimer} />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4 pb-6">
+            {/* Subject select */}
             <div className="flex gap-2 w-full max-w-xs">
               <Select value={selectedSubject} onValueChange={(v) => { setSelectedSubject(v); setSelectedTopic(''); }}>
                 <SelectTrigger className="flex-1">
@@ -224,6 +281,7 @@ const Estudos = () => {
                       <span className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                         {s.label}
+                        {s.completed && <CheckCircle2 className="h-3 w-3 text-[hsl(152,69%,53%)]" />}
                       </span>
                     </SelectItem>
                   ))}
@@ -231,6 +289,7 @@ const Estudos = () => {
               </Select>
             </div>
 
+            {/* Topic select */}
             {currentTopics.length > 0 && (
               <Select value={selectedTopic} onValueChange={setSelectedTopic}>
                 <SelectTrigger className="w-full max-w-xs">
@@ -239,48 +298,96 @@ const Estudos = () => {
                 <SelectContent>
                   <SelectItem value="__none__">Sem assunto específico</SelectItem>
                   {currentTopics.map((t, i) => (
-                    <SelectItem key={i} value={t}>{t}</SelectItem>
+                    <SelectItem key={i} value={t.name}>
+                      <span className="flex items-center gap-2">
+                        {t.completed && <CheckCircle2 className="h-3 w-3 text-[hsl(152,69%,53%)]" />}
+                        <span className={t.completed ? 'line-through text-muted-foreground' : ''}>{t.name}</span>
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
 
-            {/* Circular timer */}
-            <div className="relative w-52 h-52">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-                <circle cx="100" cy="100" r="90" fill="none" strokeWidth="6" className="stroke-secondary" />
-                <circle
-                  cx="100" cy="100" r="90" fill="none" strokeWidth="6"
-                  stroke={pomodoro.isBreak ? "hsl(152, 69%, 53%)" : "hsl(12, 90%, 60%)"}
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  className="transition-all duration-1000"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold tabular-nums">{pomodoro.display}</span>
-                <span className="text-xs text-muted-foreground mt-1">
-                  {pomodoro.isBreak ? "Pausa" : "Foco"}
-                </span>
-                {pomodoro.completedPomodoros > 0 && (
-                  <span className="text-xs text-primary mt-1">🍅 {pomodoro.completedPomodoros}</span>
-                )}
-              </div>
-            </div>
+            {useTimer ? (
+              <>
+                {/* Duration selector */}
+                <Select value={String(pomodoro.workMinutes)} onValueChange={(v) => pomodoro.changeWorkMinutes(Number(v))}>
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DURATION_OPTIONS.map(d => (
+                      <SelectItem key={d} value={String(d)}>
+                        {d >= 60 ? `${d / 60}h` : `${d} min`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <div className="flex gap-2">
-              <Button onClick={pomodoro.toggle} size="lg" className="gap-2">
-                {pomodoro.isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {pomodoro.isRunning ? "Pausar" : "Iniciar"}
-              </Button>
-              <Button onClick={pomodoro.reset} variant="outline" size="lg">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button onClick={handleFinishSession} variant="secondary" size="lg">
-                Salvar sessão
-              </Button>
-            </div>
+                {/* Circular timer */}
+                <div className="relative w-48 h-48">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="90" fill="none" strokeWidth="6" className="stroke-secondary" />
+                    <circle
+                      cx="100" cy="100" r="90" fill="none" strokeWidth="6"
+                      stroke={pomodoro.isBreak ? "hsl(152, 69%, 53%)" : "hsl(12, 90%, 60%)"}
+                      strokeLinecap="round"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      className="transition-all duration-1000"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-4xl font-bold tabular-nums">{pomodoro.display}</span>
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {pomodoro.isBreak ? "Pausa" : "Foco"}
+                    </span>
+                    {pomodoro.completedPomodoros > 0 && (
+                      <span className="text-xs text-primary mt-1">🍅 {pomodoro.completedPomodoros}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={pomodoro.toggle} size="lg" className="gap-2">
+                    {pomodoro.isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {pomodoro.isRunning ? "Pausar" : "Iniciar"}
+                  </Button>
+                  <Button onClick={pomodoro.reset} variant="outline" size="lg">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={handleFinishSession} variant="secondary" size="lg">
+                    Salvar
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Free session - manual duration */}
+                <div className="flex flex-col items-center gap-4 py-6">
+                  <div className="p-4 rounded-full bg-secondary/50">
+                    <BookOpen className="h-10 w-10 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">Registre quanto tempo estudou</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Minutos"
+                      value={freeSessionMinutes}
+                      onChange={e => setFreeSessionMinutes(e.target.value)}
+                      className="w-28 text-center"
+                      min={1}
+                    />
+                    <span className="text-sm text-muted-foreground">min</span>
+                  </div>
+                  <Button onClick={handleFinishSession} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Registrar sessão
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -337,6 +444,7 @@ const Estudos = () => {
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(session.date), "dd/MM · HH:mm")} · {session.duration}min
                             {session.completedPomodoros ? ` · 🍅${session.completedPomodoros}` : ''}
+                            {session.type === 'free' && ' · livre'}
                           </p>
                         </div>
                       </div>
