@@ -100,7 +100,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Horário</label>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Horário (opcional)</label>
               <Input
                 type="time"
                 value={time}
