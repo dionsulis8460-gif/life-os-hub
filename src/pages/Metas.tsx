@@ -33,6 +33,7 @@ const Metas = () => {
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
   const [newMilestone, setNewMilestone] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [celebrationData, setCelebrationData] = useState<{ open: boolean; title: string; number: number }>({ open: false, title: '', number: 0 });
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setCategory('pessoal'); setDeadline(undefined); setProgress(0);
