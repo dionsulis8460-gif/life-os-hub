@@ -2,13 +2,34 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Preencha todos os campos.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await signIn(email, password);
+    setLoading(false);
+    if (error) {
+      toast.error("Email ou senha inválidos.");
+    } else {
+      navigate("/app");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-6">
@@ -27,7 +48,7 @@ const Login = () => {
           <p className="text-muted-foreground text-sm">Entre na sua conta para continuar.</p>
         </div>
 
-        <div className="rounded-3xl bg-card p-6 shadow-card space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-3xl bg-card p-6 shadow-card space-y-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Email</label>
             <Input
@@ -49,18 +70,11 @@ const Login = () => {
             />
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-            <Button variant="hero" className="w-full" asChild>
-              <Link to="/app">Entrar</Link>
+            <Button variant="hero" className="w-full" type="submit" disabled={loading}>
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
           </motion.div>
-          <div className="relative my-2">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
-          </div>
-          <Button variant="secondary" className="w-full shadow-subtle">
-            Continuar com Google
-          </Button>
-        </div>
+        </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Não tem conta? <Link to="/signup" className="text-primary hover:underline">Criar conta</Link>

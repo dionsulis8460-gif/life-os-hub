@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -33,6 +34,13 @@ const bottomItems = [
 
 const AppLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -91,7 +99,10 @@ const AppLayout = () => {
               {item.label}
             </NavLink>
           ))}
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200 w-full">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200 w-full"
+          >
             <LogOut className="w-5 h-5" />
             Sair
           </button>

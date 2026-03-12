@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -10,6 +12,28 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email || !password) {
+      toast.error("Preencha todos os campos.");
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await signUp(email, password, name);
+    setLoading(false);
+    if (error) {
+      toast.error("Erro ao criar conta. Tente novamente.");
+    } else {
+      toast.success("Conta criada! Verifique seu email para confirmar.");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-6">
@@ -28,7 +52,7 @@ const Signup = () => {
           <p className="text-muted-foreground text-sm">7 dias grátis. Sem cartão de crédito.</p>
         </div>
 
-        <div className="rounded-3xl bg-card p-6 shadow-card space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-3xl bg-card p-6 shadow-card space-y-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Nome</label>
             <Input
@@ -60,18 +84,11 @@ const Signup = () => {
             />
           </div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-            <Button variant="hero" className="w-full">
-              Começar teste gratuito
+            <Button variant="hero" className="w-full" type="submit" disabled={loading}>
+              {loading ? "Criando conta..." : "Começar teste gratuito"}
             </Button>
           </motion.div>
-          <div className="relative my-2">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
-          </div>
-          <Button variant="secondary" className="w-full shadow-subtle">
-            Continuar com Google
-          </Button>
-        </div>
+        </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Já tem conta? <Link to="/login" className="text-primary hover:underline">Entrar</Link>
