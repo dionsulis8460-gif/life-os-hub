@@ -42,7 +42,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
       setTitle("");
       setDescription("");
       setPriority("media");
-      setTime("09:00");
+      setTime("");
     }
   }, [editTask, open]);
 
