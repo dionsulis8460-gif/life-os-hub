@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Filter, CheckSquare } from "lucide-react";
+import ModuleGate from "@/components/layout/ModuleGate";
 import { Button } from "@/components/ui/button";
 import {
   Select,
