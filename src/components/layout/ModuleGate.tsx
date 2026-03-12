@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
-import { Lock, Crown, Zap, ArrowRight } from "lucide-react";
+import { Lock, Crown, Zap, ArrowRight, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -14,7 +16,7 @@ interface ModuleGateProps {
 }
 
 const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
-  const { hasModuleAccess, isLoading, subscription, isTrialActive, trialDaysLeft } = useSubscription();
+  const { hasModuleAccess, isLoading, subscription, isTrialActive, isLimitedFreeActive, limitedFreeDaysLeft, refetch } = useSubscription();
 
   if (isLoading) {
     return (
@@ -32,6 +34,22 @@ const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
   const isExpiredTrial = status === "trial" && !isTrialActive;
   const isCancelled = status === "cancelled";
   const isLimitedFree = status === "limited_free";
+  const canSelectFreeModule = isLimitedFreeActive && (!subscription?.selected_modules || subscription.selected_modules.length === 0);
+
+  const handleSelectFreeModule = async () => {
+    if (!subscription) return;
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ selected_modules: [module] })
+      .eq("id", subscription.id);
+
+    if (error) {
+      toast.error("Erro ao selecionar módulo gratuito.");
+      return;
+    }
+    toast.success(`${moduleName} ativado como módulo gratuito!`);
+    refetch();
+  };
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -59,12 +77,26 @@ const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
             ? "Seu período de teste expirou. Assine um plano para continuar usando todos os módulos."
             : isCancelled
             ? "Sua assinatura foi cancelada. Renove para acessar este módulo."
+            : canSelectFreeModule
+            ? `No modo gratuito, você pode escolher 1 módulo por ${limitedFreeDaysLeft} dias. Deseja ativar ${moduleName}?`
             : isLimitedFree
             ? "No modo gratuito, você tem acesso a apenas 1 módulo. Faça upgrade para desbloquear mais."
             : "Assine um plano para acessar este módulo."}
         </p>
 
         <div className="space-y-3">
+          {canSelectFreeModule && (
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
+              <Button
+                onClick={handleSelectFreeModule}
+                className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Gift className="w-4 h-4" />
+                Ativar {moduleName} gratuitamente
+              </Button>
+            </motion.div>
+          )}
+
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
             <Button variant="hero" className="w-full gap-2" asChild>
               <Link to="/app/planos">
