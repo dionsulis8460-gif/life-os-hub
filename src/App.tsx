@@ -19,6 +19,8 @@ import Alimentacao from "./pages/Alimentacao";
 import Metas from "./pages/Metas";
 import Configuracoes from "./pages/Configuracoes";
 import Planos from "./pages/Planos";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
