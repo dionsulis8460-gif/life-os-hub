@@ -218,7 +218,6 @@ const Metas = () => {
                               }}>
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Concluir
                               </Button>
-                              </Button>
                               <Button size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={() => { deleteGoal(goal.id); toast.success("Meta removida."); }}>
                                 <Trash2 className="h-3.5 w-3.5" /> Excluir
                               </Button>
