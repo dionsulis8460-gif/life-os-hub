@@ -26,7 +26,11 @@ const Login = () => {
     const { error } = await signIn(email, password);
     setLoading(false);
     if (error) {
-      toast.error("Email ou senha inválidos.");
+      if (error.message?.includes("Email not confirmed")) {
+        toast.error("Email ainda não confirmado. Verifique sua caixa de entrada.");
+      } else {
+        toast.error("Email ou senha inválidos.");
+      }
     } else {
       navigate("/app");
     }
