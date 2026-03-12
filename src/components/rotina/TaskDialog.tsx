@@ -30,7 +30,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("media");
-  const [time, setTime] = useState("09:00");
+  const [time, setTime] = useState("");
 
   useEffect(() => {
     if (editTask) {
@@ -42,7 +42,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
       setTitle("");
       setDescription("");
       setPriority("media");
-      setTime("09:00");
+      setTime("");
     }
   }, [editTask, open]);
 
@@ -100,7 +100,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
             </div>
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Horário</label>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Horário (opcional)</label>
               <Input
                 type="time"
                 value={time}

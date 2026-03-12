@@ -57,10 +57,12 @@ const TaskCard = ({ task, onToggle, onEdit, onDelete }: TaskCardProps) => {
           {task.description && (
             <p className="text-xs text-muted-foreground leading-relaxed mb-1.5">{task.description}</p>
           )}
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            <span className="text-xs tabular-nums">{task.time}</span>
-          </div>
+          {task.time && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              <span className="text-xs tabular-nums">{task.time}</span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
