@@ -32,7 +32,7 @@ const Signup = () => {
     if (error) {
       toast.error("Erro ao criar conta. Tente novamente.");
     } else {
-      toast.success("Conta criada! Verifique seu email para confirmar.");
+      toast.success("Conta criada com sucesso!");
     }
   };
 
