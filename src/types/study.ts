@@ -8,11 +8,17 @@ export interface StudySession {
   completedPomodoros?: number;
 }
 
+export interface Topic {
+  name: string;
+  completed: boolean;
+}
+
 export interface Subject {
   id: string;
   label: string;
   color: string;
-  topics: string[];
+  topics: Topic[];
+  completed: boolean;
 }
 
 const DEFAULT_COLORS = [
@@ -26,15 +32,17 @@ const DEFAULT_COLORS = [
   'hsl(215, 20%, 65%)',
 ];
 
+export const DURATION_OPTIONS = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120];
+
 export const DEFAULT_SUBJECTS: Subject[] = [
-  { id: '1', label: 'Matemática', color: DEFAULT_COLORS[0], topics: [] },
-  { id: '2', label: 'Português', color: DEFAULT_COLORS[1], topics: [] },
-  { id: '3', label: 'Ciências', color: DEFAULT_COLORS[2], topics: [] },
-  { id: '4', label: 'História', color: DEFAULT_COLORS[3], topics: [] },
-  { id: '5', label: 'Programação', color: DEFAULT_COLORS[4], topics: [] },
-  { id: '6', label: 'Inglês', color: DEFAULT_COLORS[5], topics: [] },
-  { id: '7', label: 'Física', color: DEFAULT_COLORS[6], topics: [] },
-  { id: '8', label: 'Outro', color: DEFAULT_COLORS[7], topics: [] },
+  { id: '1', label: 'Matemática', color: DEFAULT_COLORS[0], topics: [], completed: false },
+  { id: '2', label: 'Português', color: DEFAULT_COLORS[1], topics: [], completed: false },
+  { id: '3', label: 'Ciências', color: DEFAULT_COLORS[2], topics: [], completed: false },
+  { id: '4', label: 'História', color: DEFAULT_COLORS[3], topics: [], completed: false },
+  { id: '5', label: 'Programação', color: DEFAULT_COLORS[4], topics: [], completed: false },
+  { id: '6', label: 'Inglês', color: DEFAULT_COLORS[5], topics: [], completed: false },
+  { id: '7', label: 'Física', color: DEFAULT_COLORS[6], topics: [], completed: false },
+  { id: '8', label: 'Outro', color: DEFAULT_COLORS[7], topics: [], completed: false },
 ];
 
 export { DEFAULT_COLORS };
