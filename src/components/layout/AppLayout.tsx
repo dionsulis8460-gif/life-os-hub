@@ -13,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import TrialAlertBanner from "./TrialAlertBanner";
 import { useAuth } from "@/contexts/AuthContext";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -133,6 +134,7 @@ const AppLayout = () => {
       {/* Main content */}
       <main className="flex-1 lg:ml-60 pb-20 lg:pb-0">
         <div className="p-6 lg:p-8">
+          <TrialAlertBanner />
           <Outlet />
         </div>
       </main>
