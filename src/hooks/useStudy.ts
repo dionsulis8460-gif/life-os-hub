@@ -1,7 +1,40 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { StudySession } from '@/types/study';
+import { StudySession, Subject, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+export function useSubjects() {
+  const [subjects, setSubjects] = useState<Subject[]>(() => {
+    const saved = localStorage.getItem('study-subjects');
+    return saved ? JSON.parse(saved) : DEFAULT_SUBJECTS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('study-subjects', JSON.stringify(subjects));
+  }, [subjects]);
+
+  const addSubject = useCallback((label: string, color: string) => {
+    setSubjects(prev => [...prev, { id: crypto.randomUUID(), label, color, topics: [] }]);
+  }, []);
+
+  const deleteSubject = useCallback((id: string) => {
+    setSubjects(prev => prev.filter(s => s.id !== id));
+  }, []);
+
+  const addTopic = useCallback((subjectId: string, topic: string) => {
+    setSubjects(prev => prev.map(s =>
+      s.id === subjectId ? { ...s, topics: [...s.topics, topic] } : s
+    ));
+  }, []);
+
+  const deleteTopic = useCallback((subjectId: string, topicIndex: number) => {
+    setSubjects(prev => prev.map(s =>
+      s.id === subjectId ? { ...s, topics: s.topics.filter((_, i) => i !== topicIndex) } : s
+    ));
+  }, []);
+
+  return { subjects, addSubject, deleteSubject, addTopic, deleteTopic };
+}
 
 export function useStudy() {
   const [sessions, setSessions] = useState<StudySession[]>(() => {
