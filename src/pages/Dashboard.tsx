@@ -56,6 +56,10 @@ const Dashboard = () => {
                   task.priority === 'Média' ? 'bg-primary/20 text-primary' :
                   'bg-muted text-muted-foreground'
                 }`}>{task.priority}</span>
+                  task.priority === 'Alta' ? 'bg-destructive/20 text-destructive' :
+                  task.priority === 'Média' ? 'bg-primary/20 text-primary' :
+                  'bg-muted text-muted-foreground'
+                }`}>{task.priority}</span>
               </div>
             ))}
             <Button variant="ghost" size="sm" className="w-full mt-2 text-muted-foreground">
