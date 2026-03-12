@@ -30,7 +30,7 @@ const TaskDialog = ({ open, onOpenChange, onSave, editTask }: TaskDialogProps) =
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("media");
-  const [time, setTime] = useState("09:00");
+  const [time, setTime] = useState("");
 
   useEffect(() => {
     if (editTask) {
