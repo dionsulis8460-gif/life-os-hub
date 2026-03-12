@@ -14,6 +14,7 @@ import { Target, Plus, Trash2, CalendarIcon, CheckCircle2, Clock, TrendingUp, Ch
 import { useGoals } from "@/hooks/useGoals";
 import { GoalCategory, GOAL_CATEGORIES } from "@/types/goal";
 import { motion, AnimatePresence } from "framer-motion";
+import { GoalCelebrationDialog } from "@/components/metas/GoalCelebrationDialog";
 import { format, differenceInDays, isPast, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
