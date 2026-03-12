@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
-import { Target, Plus, Trash2, CalendarIcon, CheckCircle2, Clock, TrendingUp, ChevronDown, ChevronRight, X, RotateCcw } from "lucide-react";
+import { Target, Plus, Trash2, CalendarIcon, CheckCircle2, Clock, TrendingUp, ChevronDown, ChevronRight, X, RotateCcw, Trophy } from "lucide-react";
 import { useGoals } from "@/hooks/useGoals";
 import { GoalCategory, GOAL_CATEGORIES } from "@/types/goal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -129,6 +129,26 @@ const Metas = () => {
             </p>
             <Button className="gap-2" onClick={() => setShowDialog(true)}>
               <Plus className="h-4 w-4" /> Criar minha primeira meta
+            </Button>
+          </CardContent>
+        </Card>
+      ) : activeGoals.length === 0 && completedGoals.length > 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center max-w-md mx-auto">
+            <div className="w-16 h-16 rounded-full bg-[hsl(152,69%,53%)]/10 flex items-center justify-center mx-auto mb-4">
+              <Trophy className="h-8 w-8 text-[hsl(152,69%,53%)]" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {completedGoals.length === 1 ? 'Você já conquistou 1 meta!' : `Você já conquistou ${completedGoals.length} metas!`} 🏆
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-1">
+              Incrível! Você provou que é capaz de alcançar seus objetivos. Agora é hora de mirar ainda mais alto.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              Quem para nunca chegou lá. Defina sua próxima meta e continue essa sequência de vitórias! 💪
+            </p>
+            <Button className="gap-2" onClick={() => setShowDialog(true)}>
+              <Plus className="h-4 w-4" /> Criar próxima meta
             </Button>
           </CardContent>
         </Card>
