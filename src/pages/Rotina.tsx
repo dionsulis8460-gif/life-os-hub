@@ -212,5 +212,10 @@ const Rotina = () => {
     </div>
   );
 };
+const RotinaPage = () => (
+  <ModuleGate module="rotina" moduleName="Rotina">
+    <Rotina />
+  </ModuleGate>
+);
 
-export default Rotina;
+export default RotinaPage;

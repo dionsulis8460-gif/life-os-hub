@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ModuleGate from "@/components/layout/ModuleGate";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
