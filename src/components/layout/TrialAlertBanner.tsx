@@ -8,31 +8,28 @@ import { useState } from "react";
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
 const TrialAlertBanner = () => {
-  const { subscription, isTrialActive, trialDaysLeft } = useSubscription();
+  const { subscription, isTrialActive, trialDaysLeft, isLimitedFreeActive, limitedFreeDaysLeft } = useSubscription();
   const [dismissed, setDismissed] = useState(false);
 
-  // Show only during trial with 2 or fewer days left
-  const shouldShow =
-    isTrialActive &&
-    trialDaysLeft <= 2 &&
-    !dismissed;
+  // Show during trial with 2 or fewer days left
+  const showTrialWarning = isTrialActive && trialDaysLeft <= 2 && !dismissed;
 
-  // Also show if trial just expired
-  const isExpired =
-    subscription?.status === "trial" &&
-    !isTrialActive;
+  // Show during limited_free mode
+  const showLimitedFree = isLimitedFreeActive && !dismissed;
 
+  // Show if trial expired (before auto-transition kicks in)
+  const isExpired = subscription?.status === "trial" && !isTrialActive;
   const showExpired = isExpired && !dismissed;
 
-  if (!shouldShow && !showExpired) return null;
+  if (!showTrialWarning && !showExpired && !showLimitedFree) return null;
+
+  const isUrgent = showExpired || trialDaysLeft <= 1 || (showLimitedFree && limitedFreeDaysLeft <= 2);
 
   return (
     <AnimatePresence>
       <motion.div
         className={`rounded-2xl p-4 mb-6 shadow-card flex items-center gap-4 flex-wrap ${
-          showExpired
-            ? "bg-destructive/10 border border-destructive/20"
-            : trialDaysLeft <= 1
+          isUrgent
             ? "bg-destructive/10 border border-destructive/20"
             : "bg-primary/10 border border-primary/20"
         }`}
@@ -43,17 +40,11 @@ const TrialAlertBanner = () => {
       >
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-            showExpired || trialDaysLeft <= 1
-              ? "bg-destructive/20"
-              : "accent-gradient"
+            isUrgent ? "bg-destructive/20" : "accent-gradient"
           }`}
         >
           <AlertTriangle
-            className={`w-5 h-5 ${
-              showExpired || trialDaysLeft <= 1
-                ? "text-destructive"
-                : "text-foreground"
-            }`}
+            className={`w-5 h-5 ${isUrgent ? "text-destructive" : "text-foreground"}`}
           />
         </div>
 
@@ -61,6 +52,8 @@ const TrialAlertBanner = () => {
           <p className="text-sm font-semibold">
             {showExpired
               ? "Seu período de teste expirou"
+              : showLimitedFree
+              ? `Modo gratuito: ${limitedFreeDaysLeft} dia${limitedFreeDaysLeft !== 1 ? "s" : ""} restante${limitedFreeDaysLeft !== 1 ? "s" : ""}`
               : trialDaysLeft === 0
               ? "Último dia do seu teste gratuito!"
               : trialDaysLeft === 1
@@ -70,6 +63,8 @@ const TrialAlertBanner = () => {
           <p className="text-xs text-muted-foreground">
             {showExpired
               ? "Assine agora para continuar usando todos os módulos."
+              : showLimitedFree
+              ? "Você pode usar 1 módulo gratuitamente. Assine para desbloquear todos."
               : "Assine um plano para não perder acesso aos módulos."}
           </p>
         </div>
