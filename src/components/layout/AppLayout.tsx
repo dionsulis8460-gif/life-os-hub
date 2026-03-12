@@ -13,6 +13,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import TrialAlertBanner from "./TrialAlertBanner";
 import { useAuth } from "@/contexts/AuthContext";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
