@@ -74,7 +74,7 @@ const Dashboard = () => {
             <div className="flex gap-4">
               <div>
                 <p className="text-xs text-muted-foreground">Receitas</p>
-                <p className="text-sm font-semibold text-emerald-400 tabular-nums">+ R$ 5.000,00</p>
+                <p className="text-sm font-semibold text-success tabular-nums">+ R$ 5.000,00</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Despesas</p>
