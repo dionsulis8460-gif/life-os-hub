@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
-import { Target, Plus, Trash2, CalendarIcon, CheckCircle2, Clock, TrendingUp, ChevronDown, ChevronRight, X, RotateCcw } from "lucide-react";
+import { Target, Plus, Trash2, CalendarIcon, CheckCircle2, Clock, TrendingUp, ChevronDown, ChevronRight, X, RotateCcw, Trophy } from "lucide-react";
 import { useGoals } from "@/hooks/useGoals";
 import { GoalCategory, GOAL_CATEGORIES } from "@/types/goal";
 import { motion, AnimatePresence } from "framer-motion";
