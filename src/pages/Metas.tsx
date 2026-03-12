@@ -132,6 +132,26 @@ const Metas = () => {
             </Button>
           </CardContent>
         </Card>
+      ) : activeGoals.length === 0 && completedGoals.length > 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center max-w-md mx-auto">
+            <div className="w-16 h-16 rounded-full bg-[hsl(152,69%,53%)]/10 flex items-center justify-center mx-auto mb-4">
+              <Trophy className="h-8 w-8 text-[hsl(152,69%,53%)]" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">
+              {completedGoals.length === 1 ? 'Você já conquistou 1 meta!' : `Você já conquistou ${completedGoals.length} metas!`} 🏆
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-1">
+              Incrível! Você provou que é capaz de alcançar seus objetivos. Agora é hora de mirar ainda mais alto.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              Quem para nunca chegou lá. Defina sua próxima meta e continue essa sequência de vitórias! 💪
+            </p>
+            <Button className="gap-2" onClick={() => setShowDialog(true)}>
+              <Plus className="h-4 w-4" /> Criar próxima meta
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
