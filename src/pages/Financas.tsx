@@ -20,7 +20,7 @@ const CHART_COLORS = [
   'hsl(30, 80%, 55%)',
 ];
 
-export default function Financas() {
+function Financas() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const {
     currentMonth,
