@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useRef } from "react";
 
 export interface Subscription {
   id: string;
@@ -20,6 +21,8 @@ export interface Subscription {
 
 export const useSubscription = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const transitionAttempted = useRef(false);
 
   const { data: subscription, isLoading, refetch } = useQuery({
     queryKey: ["subscription", user?.id],
@@ -36,12 +39,48 @@ export const useSubscription = () => {
     enabled: !!user,
   });
 
+  const transitionMutation = useMutation({
+    mutationFn: async (subscriptionId: string) => {
+      const limitedFreeEndsAt = new Date();
+      limitedFreeEndsAt.setDate(limitedFreeEndsAt.getDate() + 7);
+
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({
+          status: "limited_free",
+          limited_free_ends_at: limitedFreeEndsAt.toISOString(),
+          selected_modules: [],
+        })
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscription", user?.id] });
+    },
+  });
+
   const isTrialActive = subscription
     ? subscription.status === "trial" && new Date(subscription.trial_ends_at) > new Date()
     : false;
 
+  const isTrialExpired =
+    subscription?.status === "trial" && !isTrialActive;
+
+  // Auto-transition expired trial → limited_free
+  useEffect(() => {
+    if (isTrialExpired && subscription && !transitionAttempted.current) {
+      transitionAttempted.current = true;
+      transitionMutation.mutate(subscription.id);
+    }
+  }, [isTrialExpired, subscription?.id]);
+
   const isActive = subscription?.status === "active";
   const isFullPlan = subscription?.plan === "full";
+
+  const isLimitedFreeActive = subscription?.status === "limited_free" &&
+    subscription.limited_free_ends_at &&
+    new Date(subscription.limited_free_ends_at) > new Date();
 
   const hasModuleAccess = (module: string) => {
     if (!subscription) return false;
@@ -63,14 +102,20 @@ export const useSubscription = () => {
     ? Math.max(0, Math.ceil((new Date(subscription.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 0;
 
+  const limitedFreeDaysLeft = subscription?.limited_free_ends_at
+    ? Math.max(0, Math.ceil((new Date(subscription.limited_free_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
   return {
     subscription,
     isLoading,
     isTrialActive,
     isActive,
     isFullPlan,
+    isLimitedFreeActive,
     hasModuleAccess,
     trialDaysLeft,
+    limitedFreeDaysLeft,
     refetch,
   };
 };
