@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -32,6 +33,15 @@ const Signup = () => {
       toast.error("Erro ao criar conta. Tente novamente.");
     } else {
       toast.success("Conta criada! Verifique seu email para confirmar.");
+    }
+  };
+
+  const handleOAuth = async (provider: "google" | "apple") => {
+    const { error } = await lovable.auth.signInWithOAuth(provider, {
+      redirect_uri: window.location.origin,
+    });
+    if (error) {
+      toast.error(`Erro ao cadastrar com ${provider === "google" ? "Google" : "Apple"}.`);
     }
   };
 
@@ -88,6 +98,18 @@ const Signup = () => {
               {loading ? "Criando conta..." : "Começar teste gratuito"}
             </Button>
           </motion.div>
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-card px-2 text-muted-foreground">ou</span></div>
+          </div>
+          <div className="space-y-2">
+            <Button type="button" variant="secondary" className="w-full shadow-subtle" onClick={() => handleOAuth("google")}>
+              Continuar com Google
+            </Button>
+            <Button type="button" variant="secondary" className="w-full shadow-subtle" onClick={() => handleOAuth("apple")}>
+              Continuar com Apple
+            </Button>
+          </div>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
