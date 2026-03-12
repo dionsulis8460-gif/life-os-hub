@@ -328,6 +328,13 @@ const Metas = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <GoalCelebrationDialog
+        open={celebrationData.open}
+        onOpenChange={(open) => setCelebrationData(prev => ({ ...prev, open }))}
+        goalTitle={celebrationData.title}
+        goalNumber={celebrationData.number}
+      />
     </div>
   );
 };
