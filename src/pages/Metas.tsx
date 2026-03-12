@@ -116,11 +116,19 @@ const Metas = () => {
       {/* Active goals */}
       {activeGoals.length === 0 && completedGoals.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">Nenhuma meta definida ainda.</p>
-            <Button variant="outline" className="mt-3 gap-2" onClick={() => setShowDialog(true)}>
-              <Plus className="h-4 w-4" /> Criar primeira meta
+          <CardContent className="py-12 text-center max-w-md mx-auto">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Target className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Comece definindo suas metas!</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-1">
+              Ter metas claras é o primeiro passo para transformar sonhos em conquistas. Pessoas que definem objetivos têm <span className="font-medium text-foreground">10x mais chances</span> de alcançá-los.
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              Estabeleça prazos, acompanhe seu progresso e celebre cada vitória. Sua jornada de crescimento começa agora! 🚀
+            </p>
+            <Button className="gap-2" onClick={() => setShowDialog(true)}>
+              <Plus className="h-4 w-4" /> Criar minha primeira meta
             </Button>
           </CardContent>
         </Card>
