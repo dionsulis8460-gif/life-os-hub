@@ -211,8 +211,13 @@ const Metas = () => {
                             </div>
 
                             <div className="flex gap-2 pt-1">
-                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { toggleComplete(goal.id); toast.success("Meta concluída! 🎉"); }}>
+                              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => {
+                                const newCompletedCount = completedGoals.length + 1;
+                                toggleComplete(goal.id);
+                                setCelebrationData({ open: true, title: goal.title, number: newCompletedCount });
+                              }}>
                                 <CheckCircle2 className="h-3.5 w-3.5" /> Concluir
+                              </Button>
                               </Button>
                               <Button size="sm" variant="ghost" className="gap-1.5 text-destructive" onClick={() => { deleteGoal(goal.id); toast.success("Meta removida."); }}>
                                 <Trash2 className="h-3.5 w-3.5" /> Excluir
