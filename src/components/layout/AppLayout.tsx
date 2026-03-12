@@ -34,6 +34,13 @@ const bottomItems = [
 
 const AppLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
