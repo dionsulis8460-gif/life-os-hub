@@ -326,7 +326,4 @@ const Metas = () => {
   );
 };
 
-// Need RotateCcw import
-import { RotateCcw } from "lucide-react";
-
 export default Metas;
