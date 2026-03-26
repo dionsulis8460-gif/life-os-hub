@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +31,21 @@ const Signup = () => {
     const { error } = await signUp(email, password, name);
     setLoading(false);
     if (error) {
-      toast.error("Erro ao criar conta. Tente novamente.");
+      const msg = error.message?.toLowerCase() ?? "";
+      if (
+        msg.includes("user already registered") ||
+        msg.includes("already registered") ||
+        (error as { code?: string }).code === "user_already_exists"
+      ) {
+        toast.error("Este email já está cadastrado. Tente fazer login.");
+        navigate("/login");
+      } else if (msg.includes("invalid email") || msg.includes("email inválido")) {
+        toast.error("Email inválido. Verifique e tente novamente.");
+      } else if (msg.includes("password") || msg.includes("senha")) {
+        toast.error("Senha fraca. Use pelo menos 8 caracteres com letras e números.");
+      } else {
+        toast.error("Erro ao criar conta. Tente novamente.");
+      }
     } else {
       toast.success("Conta criada com sucesso!");
     }
