@@ -31,18 +31,19 @@ const Signup = () => {
     const { error } = await signUp(email, password, name);
     setLoading(false);
     if (error) {
+      const code = (error as { code?: string }).code ?? "";
       const msg = error.message?.toLowerCase() ?? "";
       if (
+        code === "user_already_exists" ||
         msg.includes("user already registered") ||
-        msg.includes("already registered") ||
-        (error as { code?: string }).code === "user_already_exists"
+        msg.includes("already registered")
       ) {
         toast.error("Este email já está cadastrado. Tente fazer login.");
         navigate("/login");
-      } else if (msg.includes("invalid email") || msg.includes("email inválido")) {
+      } else if (code === "weak_password" || msg.includes("password is too weak") || msg.includes("should be at least")) {
+        toast.error("Senha muito fraca. Use pelo menos 8 caracteres com letras e números.");
+      } else if (code === "invalid_email" || msg.includes("invalid email")) {
         toast.error("Email inválido. Verifique e tente novamente.");
-      } else if (msg.includes("password") || msg.includes("senha")) {
-        toast.error("Senha fraca. Use pelo menos 8 caracteres com letras e números.");
       } else {
         toast.error("Erro ao criar conta. Tente novamente.");
       }
