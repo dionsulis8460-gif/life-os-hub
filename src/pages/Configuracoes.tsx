@@ -3,6 +3,17 @@ import { motion } from "framer-motion";
 import { Settings, User, Shield, Trash2, Info, Save, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -209,16 +220,35 @@ const Configuracoes = () => {
               Apague todos os dados locais do aplicativo (tarefas, hábitos, finanças, refeições,
               metas e sessões de estudo). Esta ação não pode ser desfeita.
             </p>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-              <Button
-                variant="destructive"
-                onClick={handleClearData}
-                className="gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Apagar dados locais
-              </Button>
-            </motion.div>
+            <AlertDialog>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="gap-2">
+                    <Trash2 className="w-4 h-4" />
+                    Apagar dados locais
+                  </Button>
+                </AlertDialogTrigger>
+              </motion.div>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar todos os dados locais?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação apagará permanentemente todas as suas tarefas, hábitos, finanças,
+                    refeições, metas e sessões de estudo armazenadas neste dispositivo.
+                    Essa operação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearData}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Sim, apagar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </SectionCard>
 

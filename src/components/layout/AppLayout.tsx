@@ -111,7 +111,7 @@ const AppLayout = () => {
       </aside>
 
       {/* Mobile bottom nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar/95 backdrop-blur-xl" style={{ boxShadow: "var(--shadow-md)" }}>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar/95 backdrop-blur-xl mobile-bottom-nav" style={{ boxShadow: "var(--shadow-md)" }}>
         <div className="flex justify-around py-2">
           {navItems.slice(0, 5).map((item) => (
             <NavLink

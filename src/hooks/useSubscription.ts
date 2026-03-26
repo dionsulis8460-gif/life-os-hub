@@ -67,7 +67,9 @@ export const useSubscription = () => {
   const isTrialExpired =
     subscription?.status === "trial" && !isTrialActive;
 
-  // Auto-transition expired trial → limited_free
+  // Auto-transition expired trial → limited_free.
+  // `transitionAttempted` ref ensures the mutation fires at most once even if
+  // the effect re-runs because `subscription` (or any dependency) changed.
   useEffect(() => {
     if (isTrialExpired && subscription && !transitionAttempted.current) {
       transitionAttempted.current = true;

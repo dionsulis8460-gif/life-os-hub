@@ -2,10 +2,26 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport-fit=cover: makes content extend into iPhone notch / Dynamic Island.
+      The app uses env(safe-area-inset-*) in CSS to avoid content being hidden
+      behind the notch.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>LifeOS - Sua vida, organizada</title>
     <meta name="description" content="Centralize rotinas, finanças, hábitos e metas em um único lugar. Menos caos, mais clareza." />
     <meta name="author" content="LifeOS" />
+
+    <!-- iOS PWA / Capacitor -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LifeOS Hub" />
+
+    <!-- Android PWA / Capacitor -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0f0f0f" />
+
+    <!-- Open Graph -->
     <meta property="og:title" content="LifeOS - Sua vida, organizada" />
     <meta property="og:description" content="Centralize rotinas, finanças, hábitos e metas em um único lugar." />
     <meta property="og:type" content="website" />
