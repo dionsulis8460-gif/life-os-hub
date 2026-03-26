@@ -2,6 +2,9 @@
 
 > **Não precisa saber programar.** Basta seguir cada passo na ordem. Se algo der errado, consulte a seção [Problemas Comuns](#-problemas-comuns) no final.
 
+> 🚨 **ATENÇÃO — Leia antes de começar:**
+> **Nunca coloque a pasta do projeto dentro do Google Drive, OneDrive, Dropbox ou qualquer pasta sincronizada na nuvem.** Esses serviços criam arquivos fantasmas que impedem o `npm install` de funcionar e causam erros do tipo `ENOTDIR` ou `EPERM`. Use sempre uma pasta local, por exemplo: `C:\Dev\LifeOS` no Windows ou `/Users/seu-nome/Dev/LifeOS` no Mac.
+
 ---
 
 ## Índice
@@ -23,6 +26,14 @@
    - [Passo 5 — Compilar e abrir no Xcode](#passo-5--compilar-e-abrir-no-xcode)
    - [Passo 6 — Instalar no iPhone pelo Xcode](#passo-6--instalar-no-iphone-pelo-xcode)
 4. [Problemas Comuns](#-problemas-comuns)
+   - [ENOTDIR / pasta no Google Drive](#-enotdir-not-a-directory-ou-eperm-operation-not-permitted-ao-rodar-npm-install)
+   - [npm não reconhecido](#-npm-command-not-found-ou-npm-não-é-reconhecido)
+   - [Android Studio não encontra o celular](#-android-studio-não-encontra-meu-celular)
+   - [Gradle sync failed](#-gradle-sync-failed-no-android-studio)
+   - [CocoaPods not found](#-cocoapods-not-found-ao-rodar-npx-cap-add-ios)
+   - [iPhone não aparece no Xcode](#-iphone-não-aparece-no-xcode)
+   - [Untrusted Developer](#-untrusted-developer-ao-abrir-o-app-no-iphone)
+   - [App trava ou fica em branco](#-o-app-trava-ou-fica-em-branco)
 
 ---
 
@@ -81,7 +92,12 @@ Você tem duas opções:
 1. Acesse https://github.com/dionsulis8460-gif/life-os-hub
 2. Clique no botão verde **"< > Code"**
 3. Clique em **"Download ZIP"**
-4. Extraia o ZIP em uma pasta fácil de achar, por exemplo `C:\LifeOS` no Windows ou `/Users/seu-nome/LifeOS` no Mac
+4. Extraia o ZIP em uma pasta **local** (fora do Google Drive / OneDrive / Dropbox):
+   - ✅ Windows: `C:\Dev\LifeOS` (crie essa pasta primeiro se não existir)
+   - ✅ Mac/Linux: `/Users/seu-nome/Dev/LifeOS`
+   - ❌ NÃO use: `G:\Meu Drive\...` ou `C:\Users\...\OneDrive\...`
+
+> ⚠️ **Por quê não usar o Google Drive?** O Google Drive cria arquivos "fantasma" de sincronização na pasta. Quando o `npm install` tenta criar a pasta `node_modules`, encontra esses arquivos no lugar e trava com erro `ENOTDIR`. Isso não tem como ser consertado sem mover a pasta.
 
 **Opção B — Usar Git (mais profissional)**
 
@@ -322,6 +338,30 @@ npm run deploy:ios
 ---
 
 ## 🆘 Problemas Comuns
+
+### ❌ "ENOTDIR: not a directory" ou "EPERM: operation not permitted" ao rodar `npm install`
+
+**Causa:** O projeto está dentro de uma pasta sincronizada com **Google Drive, OneDrive ou Dropbox**. Esses serviços criam arquivos de espaço reservado ("placeholders") na pasta, e o npm não consegue criar a estrutura `node_modules` por cima deles.
+
+**Solução — mova a pasta do projeto para fora da nuvem:**
+
+1. Feche o terminal / Prompt de Comando
+2. Crie uma nova pasta local, por exemplo: `C:\Dev\LifeOS`
+   - Pressione `Windows + E` para abrir o Explorador de Arquivos
+   - Navegue até o disco `C:`
+   - Clique com o botão direito → **Novo → Pasta** → nomeie `Dev`
+   - Dentro de `Dev`, crie outra pasta `LifeOS`
+3. Copie (ou extraia novamente) todos os arquivos do projeto para `C:\Dev\LifeOS`
+4. Delete a pasta `node_modules` se existir dentro da pasta copiada (ela estava corrompida)
+5. Abra o terminal nessa nova pasta e execute novamente:
+   ```cmd
+   npm install
+   ```
+
+> 💡 **Dica:** Se quiser manter uma cópia no Google Drive para backup, só copie a pasta de volta para o Drive **depois** de terminar toda a instalação. Nunca desenvolva de dentro da pasta sincronizada.
+
+---
+
 
 ### ❌ "npm: command not found" ou "'npm' não é reconhecido"
 **Solução:** O Node.js não foi instalado corretamente. Baixe e instale novamente em https://nodejs.org (versão LTS). Reinicie o terminal após instalar.
