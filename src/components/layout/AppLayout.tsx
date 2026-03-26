@@ -59,7 +59,7 @@ const AppLayout = () => {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? "text-foreground shadow-subtle bg-sidebar-accent"
                     : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50"
