@@ -1,6 +1,12 @@
 # LifeOS Hub — Guia Multiplataforma
 
-Este guia explica como compilar e distribuir o LifeOS Hub para cada plataforma.
+> 👶 **Primeira vez? Nunca compilou um app antes?**
+> Veja o guia detalhado passo a passo (explicado do zero):
+> **👉 [COMO_INSTALAR_NO_CELULAR.md](./COMO_INSTALAR_NO_CELULAR.md)**
+
+---
+
+Este arquivo é o **guia técnico de referência** para quem já conhece o fluxo.
 
 ---
 
@@ -124,6 +130,9 @@ Exemplo de `entitlements.mac.plist`:
 ---
 
 ## Variável de ambiente `BUILD_TARGET`
+
+Os scripts usam [`cross-env`](https://github.com/kentcdodds/cross-env) para definir
+`BUILD_TARGET`, garantindo compatibilidade com Windows, macOS e Linux sem ajustes manuais.
 
 | Valor | Usado em |
 |---|---|
