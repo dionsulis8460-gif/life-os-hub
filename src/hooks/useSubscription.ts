@@ -39,7 +39,7 @@ export const useSubscription = () => {
     enabled: !!user,
   });
 
-  const transitionMutation = useMutation({
+  const { mutate: runTrialTransition } = useMutation({
     mutationFn: async (subscriptionId: string) => {
       const limitedFreeEndsAt = new Date();
       limitedFreeEndsAt.setDate(limitedFreeEndsAt.getDate() + 7);
@@ -71,9 +71,9 @@ export const useSubscription = () => {
   useEffect(() => {
     if (isTrialExpired && subscription && !transitionAttempted.current) {
       transitionAttempted.current = true;
-      transitionMutation.mutate(subscription.id);
+      runTrialTransition(subscription.id);
     }
-  }, [isTrialExpired, subscription?.id]);
+  }, [isTrialExpired, subscription, runTrialTransition]);
 
   const isActive = subscription?.status === "active";
   const isFullPlan = subscription?.plan === "full";

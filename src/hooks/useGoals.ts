@@ -3,8 +3,12 @@ import { Goal } from '@/types/goal';
 
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>(() => {
-    const saved = localStorage.getItem('goals-data');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('goals-data');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {

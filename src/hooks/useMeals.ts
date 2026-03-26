@@ -5,8 +5,12 @@ import { ptBR } from 'date-fns/locale';
 
 export function useMeals() {
   const [meals, setMeals] = useState<Meal[]>(() => {
-    const saved = localStorage.getItem('meals-data');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('meals-data');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {

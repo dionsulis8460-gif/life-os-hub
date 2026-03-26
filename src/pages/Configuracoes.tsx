@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { ALL_STORAGE_KEYS } from "@/lib/storage-keys";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -95,15 +96,7 @@ const Configuracoes = () => {
   };
 
   const handleClearData = () => {
-    const keysToRemove = [
-      "lifeos-finances",
-      "app-habits",
-      "goals-data",
-      "meals-data",
-      "study-subjects",
-      "study-sessions",
-    ];
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    ALL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
     toast.success("Dados locais apagados com sucesso!");
   };
 

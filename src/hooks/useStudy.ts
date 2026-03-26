@@ -3,19 +3,38 @@ import { StudySession, Subject, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// Shape of a subject as it may be stored in localStorage (topics may be
+// a plain string array from an older version of the app).
+interface StoredTopic {
+  name: string;
+  completed: boolean;
+}
+
+interface StoredSubject {
+  id: string;
+  label: string;
+  color: string;
+  completed?: boolean;
+  topics?: Array<string | StoredTopic>;
+}
+
 export function useSubjects() {
   const [subjects, setSubjects] = useState<Subject[]>(() => {
     const saved = localStorage.getItem('study-subjects');
     if (saved) {
-      // Migrate old format (topics as string[]) to new format
-      const parsed = JSON.parse(saved);
-      return parsed.map((s: any) => ({
-        ...s,
-        completed: s.completed ?? false,
-        topics: (s.topics || []).map((t: any) =>
-          typeof t === 'string' ? { name: t, completed: false } : t
-        ),
-      }));
+      try {
+        // Migrate old format (topics as string[]) to new format
+        const parsed = JSON.parse(saved) as StoredSubject[];
+        return parsed.map((s) => ({
+          ...s,
+          completed: s.completed ?? false,
+          topics: (s.topics || []).map((t) =>
+            typeof t === 'string' ? { name: t, completed: false } : t
+          ),
+        }));
+      } catch {
+        return DEFAULT_SUBJECTS;
+      }
     }
     return DEFAULT_SUBJECTS;
   });
