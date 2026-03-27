@@ -34,7 +34,20 @@ export const useSubscription = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw error;
-      return data as Subscription | null;
+
+      // #6 — Auto-create subscription row if the DB trigger hasn't run yet
+      // (e.g. existing users before the trigger was added, or trigger failure).
+      if (!data) {
+        const { data: created, error: insertError } = await supabase
+          .from("subscriptions")
+          .insert({ user_id: user.id })
+          .select("*")
+          .single();
+        if (insertError) throw insertError;
+        return created as Subscription;
+      }
+
+      return data as Subscription;
     },
     enabled: !!user,
   });

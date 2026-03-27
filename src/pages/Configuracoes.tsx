@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, User, Shield, Trash2, Info, Save, LogOut } from "lucide-react";
+import { Settings, User, Shield, Trash2, Info, Save, LogOut, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,7 +18,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ALL_STORAGE_KEYS } from "@/lib/storage-keys";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -62,6 +61,7 @@ const Configuracoes = () => {
       : ""
   );
   const [savingProfile, setSavingProfile] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -109,9 +109,72 @@ const Configuracoes = () => {
     }
   };
 
-  const handleClearData = () => {
-    ALL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-    toast.success("Dados locais apagados com sucesso!");
+  // Export all user data from Supabase as a JSON file download
+  const handleExportData = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const [tasks, habits, completions, transactions, goals, milestones, meals, sessions, subjects] =
+        await Promise.all([
+          supabase.from("tasks").select("*").eq("user_id", user.id),
+          supabase.from("habits").select("*").eq("user_id", user.id),
+          supabase.from("habit_completions").select("*").eq("user_id", user.id),
+          supabase.from("transactions").select("*").eq("user_id", user.id),
+          supabase.from("goals").select("*").eq("user_id", user.id),
+          supabase.from("milestones").select("*, goals!inner(user_id)").eq("goals.user_id", user.id),
+          supabase.from("meals").select("*").eq("user_id", user.id),
+          supabase.from("study_sessions").select("*").eq("user_id", user.id),
+          supabase.from("study_subjects").select("*, study_topics(*)").eq("user_id", user.id),
+        ]);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        user: { id: user.id, email: user.email },
+        tasks: tasks.data ?? [],
+        habits: habits.data ?? [],
+        habit_completions: completions.data ?? [],
+        transactions: transactions.data ?? [],
+        goals: goals.data ?? [],
+        milestones: milestones.data ?? [],
+        meals: meals.data ?? [],
+        study_sessions: sessions.data ?? [],
+        study_subjects: subjects.data ?? [],
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `lifeos-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Dados exportados com sucesso!");
+    } catch {
+      toast.error("Erro ao exportar dados. Tente novamente.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Delete all user data from Supabase tables (cascades handle relations)
+  const handleClearData = async () => {
+    if (!user) return;
+    try {
+      await Promise.all([
+        supabase.from("tasks").delete().eq("user_id", user.id),
+        supabase.from("habits").delete().eq("user_id", user.id),
+        supabase.from("transactions").delete().eq("user_id", user.id),
+        supabase.from("goals").delete().eq("user_id", user.id),
+        supabase.from("meals").delete().eq("user_id", user.id),
+        supabase.from("study_sessions").delete().eq("user_id", user.id),
+        supabase.from("study_subjects").delete().eq("user_id", user.id),
+      ]);
+      toast.success("Todos os dados foram apagados com sucesso!");
+    } catch {
+      toast.error("Erro ao apagar dados. Tente novamente.");
+    }
   };
 
   const handleLogout = async () => {
@@ -177,83 +240,113 @@ const Configuracoes = () => {
 
         {/* Security — only shown for email/password accounts */}
         {isPasswordUser && (
-        <SectionCard icon={Shield} title="Segurança" delay={0.1}>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                Nova senha
-              </label>
-              <Input
-                type="password"
-                placeholder="Mínimo 8 caracteres"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="rounded-lg bg-input border-0 focus-visible:ring-2 focus-visible:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                Confirmar nova senha
-              </label>
-              <Input
-                type="password"
-                placeholder="Repita a nova senha"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="rounded-lg bg-input border-0 focus-visible:ring-2 focus-visible:ring-primary"
-              />
-            </div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-              <Button
-                variant="secondary"
-                onClick={handleChangePassword}
-                disabled={savingPassword}
-                className="gap-2"
+          <SectionCard icon={Shield} title="Segurança" delay={0.1}>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+                  Nova senha
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="rounded-lg bg-input border-0 focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+                  Confirmar nova senha
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Repita a nova senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="rounded-lg bg-input border-0 focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={spring}
               >
-                <Shield className="w-4 h-4" />
-                {savingPassword ? "Alterando..." : "Alterar senha"}
-              </Button>
-            </motion.div>
-          </div>
-        </SectionCard>
+                <Button
+                  variant="secondary"
+                  onClick={handleChangePassword}
+                  disabled={savingPassword}
+                  className="gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  {savingPassword ? "Alterando..." : "Alterar senha"}
+                </Button>
+              </motion.div>
+            </div>
+          </SectionCard>
         )}
 
         {/* Data Management */}
         <SectionCard icon={Trash2} title="Gerenciar Dados" delay={0.15}>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Apague todos os dados locais do aplicativo (tarefas, hábitos, finanças, refeições,
-              metas e sessões de estudo). Esta ação não pode ser desfeita.
-            </p>
-            <AlertDialog>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Apagar dados locais
-                  </Button>
-                </AlertDialogTrigger>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Exporte todos os seus dados (tarefas, hábitos, finanças, refeições, metas e
+                sessões de estudo) em formato JSON.
+              </p>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={spring}
+              >
+                <Button
+                  variant="secondary"
+                  onClick={handleExportData}
+                  disabled={exporting}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  {exporting ? "Exportando..." : "Exportar dados"}
+                </Button>
               </motion.div>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Apagar todos os dados locais?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação apagará permanentemente todas as suas tarefas, hábitos, finanças,
-                    refeições, metas e sessões de estudo armazenadas neste dispositivo.
-                    Essa operação não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleClearData}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Sim, apagar tudo
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Apague permanentemente todos os seus dados. Esta ação não pode ser desfeita.
+              </p>
+              <AlertDialog>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={spring}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="gap-2">
+                      <Trash2 className="w-4 h-4" />
+                      Apagar todos os dados
+                    </Button>
+                  </AlertDialogTrigger>
+                </motion.div>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Apagar todos os dados?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação apagará permanentemente todas as suas tarefas, hábitos, finanças,
+                      refeições, metas e sessões de estudo. Essa operação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearData}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, apagar tudo
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         </SectionCard>
 
@@ -264,11 +357,7 @@ const Configuracoes = () => {
               Encerre sua sessão atual em todos os dispositivos.
             </p>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={spring}>
-              <Button
-                variant="secondary"
-                onClick={handleLogout}
-                className="gap-2"
-              >
+              <Button variant="secondary" onClick={handleLogout} className="gap-2">
                 <LogOut className="w-4 h-4" />
                 Sair da conta
               </Button>
@@ -301,4 +390,3 @@ const Configuracoes = () => {
 };
 
 export default Configuracoes;
-
