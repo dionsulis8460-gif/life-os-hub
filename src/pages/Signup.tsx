@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -14,7 +13,7 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,9 +52,7 @@ const Signup = () => {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
-    const { error } = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
+    const { error } = await signInWithOAuth(provider);
     if (error) {
       toast.error(`Erro ao cadastrar com ${provider === "google" ? "Google" : "Apple"}.`);
     }

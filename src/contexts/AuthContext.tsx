@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithOAuth: (provider: "google" | "apple") => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -52,12 +53,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
+  const signInWithOAuth = async (provider: "google" | "apple") => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin + "/app",
+      },
+    });
+    return { error: error as AuthError | null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signInWithOAuth, signOut }}>
       {children}
     </AuthContext.Provider>
   );
