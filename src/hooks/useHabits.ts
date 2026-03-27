@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
 import { Habit } from "@/types/habit";
-import { format, subDays, isToday, parseISO, differenceInCalendarDays } from "date-fns";
+import { format, subDays, getDay } from "date-fns";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
-const STORAGE_KEY = "app-habits";
+const STORAGE_KEY = STORAGE_KEYS.habits;
 
 function loadHabits(): Habit[] {
   try {
@@ -15,6 +16,15 @@ function loadHabits(): Habit[] {
 
 function saveHabits(habits: Habit[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+}
+
+/** Returns true if a habit is expected to be completed on the given date. */
+function isExpectedDay(habit: Habit, date: Date): boolean {
+  const dow = getDay(date); // 0=Sun, 1=Mon, ..., 6=Sat
+  if (habit.frequency === "daily") return true;
+  if (habit.frequency === "weekdays") return dow >= 1 && dow <= 5;
+  if (habit.frequency === "weekends") return dow === 0 || dow === 6;
+  return true;
 }
 
 export function useHabits() {
@@ -53,11 +63,16 @@ export function useHabits() {
     let streak = 0;
     let day = new Date();
     const today = format(day, "yyyy-MM-dd");
-    // If not completed today, start checking from yesterday
-    if (!habit.completedDates.includes(today)) {
+    // If today is an expected day but not yet completed, start from yesterday
+    if (isExpectedDay(habit, day) && !habit.completedDates.includes(today)) {
       day = subDays(day, 1);
     }
     while (true) {
+      // Skip days that are not expected for this habit's frequency
+      if (!isExpectedDay(habit, day)) {
+        day = subDays(day, 1);
+        continue;
+      }
       const dateStr = format(day, "yyyy-MM-dd");
       if (habit.completedDates.includes(dateStr)) {
         streak++;
@@ -72,16 +87,20 @@ export function useHabits() {
   const getLast7Days = (habit: Habit): boolean[] => {
     const days: boolean[] = [];
     for (let i = 6; i >= 0; i--) {
-      const dateStr = format(subDays(new Date(), i), "yyyy-MM-dd");
-      days.push(habit.completedDates.includes(dateStr));
+      const date = subDays(new Date(), i);
+      const dateStr = format(date, "yyyy-MM-dd");
+      // Mark non-expected days as true (not a miss) so the UI doesn't show false failures
+      days.push(!isExpectedDay(habit, date) || habit.completedDates.includes(dateStr));
     }
     return days;
   };
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const todayStats = useMemo(() => {
-    const total = habits.length;
-    const done = habits.filter((h) => h.completedDates.includes(todayStr)).length;
+    const today = new Date();
+    const applicableHabits = habits.filter((h) => isExpectedDay(h, today));
+    const total = applicableHabits.length;
+    const done = applicableHabits.filter((h) => h.completedDates.includes(todayStr)).length;
     return { total, done, progress: total > 0 ? Math.round((done / total) * 100) : 0 };
   }, [habits, todayStr]);
 

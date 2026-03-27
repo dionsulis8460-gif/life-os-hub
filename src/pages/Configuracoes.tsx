@@ -53,6 +53,9 @@ const Configuracoes = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Email/password users have provider "email"; OAuth users have "google", "apple", etc.
+  const isPasswordUser = user?.app_metadata?.provider === "email";
+
   const [displayName, setDisplayName] = useState(
     typeof user?.user_metadata?.full_name === "string"
       ? user.user_metadata.full_name
@@ -172,7 +175,8 @@ const Configuracoes = () => {
           </div>
         </SectionCard>
 
-        {/* Security */}
+        {/* Security — only shown for email/password accounts */}
+        {isPasswordUser && (
         <SectionCard icon={Shield} title="Segurança" delay={0.1}>
           <div className="space-y-4">
             <div>
@@ -212,6 +216,7 @@ const Configuracoes = () => {
             </motion.div>
           </div>
         </SectionCard>
+        )}
 
         {/* Data Management */}
         <SectionCard icon={Trash2} title="Gerenciar Dados" delay={0.15}>

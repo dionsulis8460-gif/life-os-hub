@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Goal } from '@/types/goal';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
 
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>(() => {
     try {
-      const saved = localStorage.getItem('goals-data');
+      const saved = localStorage.getItem(STORAGE_KEYS.goals);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -12,7 +13,7 @@ export function useGoals() {
   });
 
   useEffect(() => {
-    localStorage.setItem('goals-data', JSON.stringify(goals));
+    localStorage.setItem(STORAGE_KEYS.goals, JSON.stringify(goals));
   }, [goals]);
 
   const addGoal = useCallback((goal: Omit<Goal, 'id' | 'createdAt' | 'completed' | 'milestones'>) => {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { StudySession, Subject, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
 
 // Shape of a subject as it may be stored in localStorage (topics may be
 // a plain string array from an older version of the app).
@@ -20,7 +21,7 @@ interface StoredSubject {
 
 export function useSubjects() {
   const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const saved = localStorage.getItem('study-subjects');
+    const saved = localStorage.getItem(STORAGE_KEYS.studySubjects);
     if (saved) {
       try {
         // Migrate old format (topics as string[]) to new format
@@ -40,7 +41,7 @@ export function useSubjects() {
   });
 
   useEffect(() => {
-    localStorage.setItem('study-subjects', JSON.stringify(subjects));
+    localStorage.setItem(STORAGE_KEYS.studySubjects, JSON.stringify(subjects));
   }, [subjects]);
 
   const addSubject = useCallback((label: string, color: string) => {
@@ -91,12 +92,12 @@ export function useSubjects() {
 
 export function useStudy() {
   const [sessions, setSessions] = useState<StudySession[]>(() => {
-    const saved = localStorage.getItem('study-sessions');
+    const saved = localStorage.getItem(STORAGE_KEYS.studySessions);
     return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('study-sessions', JSON.stringify(sessions));
+    localStorage.setItem(STORAGE_KEYS.studySessions, JSON.stringify(sessions));
   }, [sessions]);
 
   const addSession = useCallback((session: Omit<StudySession, 'id'>) => {

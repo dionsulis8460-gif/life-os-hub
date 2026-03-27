@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Meal } from '@/types/meal';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
 
 export function useMeals() {
   const [meals, setMeals] = useState<Meal[]>(() => {
     try {
-      const saved = localStorage.getItem('meals-data');
+      const saved = localStorage.getItem(STORAGE_KEYS.meals);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -14,7 +15,7 @@ export function useMeals() {
   });
 
   useEffect(() => {
-    localStorage.setItem('meals-data', JSON.stringify(meals));
+    localStorage.setItem(STORAGE_KEYS.meals, JSON.stringify(meals));
   }, [meals]);
 
   const addMeal = useCallback((meal: Omit<Meal, 'id'>) => {

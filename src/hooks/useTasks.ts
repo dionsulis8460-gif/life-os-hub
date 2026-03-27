@@ -7,25 +7,14 @@ const STORAGE_KEY = STORAGE_KEYS.tasks;
 function loadTasks(): Task[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : getInitialTasks();
+    return raw ? JSON.parse(raw) : [];
   } catch {
-    return getInitialTasks();
+    return [];
   }
 }
 
 function saveTasks(tasks: Task[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
-function getInitialTasks(): Task[] {
-  const now = new Date().toISOString();
-  return [
-    { id: "1", title: "Planejar a próxima semana", description: "Revisar agenda e definir prioridades", priority: "alta", time: "08:00", done: false, createdAt: now },
-    { id: "2", title: "Revisar relatório mensal", description: "Conferir números e preparar apresentação", priority: "media", time: "10:00", done: true, createdAt: now },
-    { id: "3", title: "Ligar para o dentista", description: "Agendar consulta de rotina", priority: "baixa", time: "14:00", done: false, createdAt: now },
-    { id: "4", title: "Responder emails pendentes", description: "", priority: "media", time: "09:00", done: false, createdAt: now },
-    { id: "5", title: "Fazer compras da semana", description: "Lista no app de notas", priority: "alta", time: "18:00", done: false, createdAt: now },
-  ];
 }
 
 export function useTasks() {

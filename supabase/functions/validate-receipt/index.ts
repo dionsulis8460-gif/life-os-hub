@@ -146,7 +146,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (_error) {
+  } catch (error) {
+    console.error("validate-receipt unhandled error:", error);
     // Return a generic message — never expose internal error details to clients.
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
