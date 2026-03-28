@@ -1,73 +1,33 @@
-# Welcome to your Lovable project
+# LifeOS Hub
 
-## Project info
+> App multiplataforma de produtividade pessoal — Rotina, Hábitos, Metas, Finanças, Alimentação e Estudos.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Rodar localmente (desenvolvimento web)
 
-## How can I edit this code?
+Veja o guia completo com todos os comandos: **[COMO_RODAR_LOCALMENTE.md](./COMO_RODAR_LOCALMENTE.md)**
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Resumo rápido:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+git clone https://github.com/dionsulis8460-gif/life-os-hub.git
+cd life-os-hub
+npm install
+cp .env.example .env   # preencha com suas chaves do Supabase
+npm run dev            # abre em http://localhost:5173
 ```
 
-**Edit a file directly in GitHub**
+## Instalar no celular (Android / iOS)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Veja o passo a passo detalhado: **[COMO_INSTALAR_NO_CELULAR.md](./COMO_INSTALAR_NO_CELULAR.md)**
 
-**Use GitHub Codespaces**
+## Multiplataforma (Web / Android / iOS / Electron)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Veja o guia técnico: **[MULTIPLATFORM.md](./MULTIPLATFORM.md)**
 
-## What technologies are used for this project?
+## Tecnologias
 
-This project is built with:
+- **Frontend:** React + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Backend / DB:** Supabase (PostgreSQL + Auth + Edge Functions)
+- **Mobile:** Capacitor 8 (Android & iOS)
+- **Desktop:** Electron 41 (Windows / Mac / Linux)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
