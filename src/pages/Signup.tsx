@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,35 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
+
+  // Detect OAuth errors returned via URL hash (e.g. provider not configured,
+  // redirect URL not whitelisted, or user denied access).
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const error = params.get("error");
+    const description = params.get("error_description");
+    if (error) {
+      const msg = description
+        ? decodeURIComponent(description.replace(/\+/g, " "))
+        : error;
+      if (
+        error === "provider_disabled" ||
+        msg.toLowerCase().includes("provider") ||
+        msg.toLowerCase().includes("not enabled")
+      ) {
+        toast.error(
+          "Login com Google/Apple não está configurado no projeto Supabase. Ative o provedor em Authentication → Providers e adicione http://localhost:5173 às Redirect URLs."
+        );
+      } else if (error === "access_denied") {
+        toast.error("Acesso negado. Verifique as permissões do aplicativo no Google/Apple.");
+      } else {
+        toast.error(`Erro de autenticação: ${msg}`);
+      }
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

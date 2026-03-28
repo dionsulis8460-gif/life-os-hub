@@ -80,6 +80,47 @@ npm run dev
 
 ---
 
+## Configurar login com Google e Apple (OAuth)
+
+O login social usa o Supabase como intermediário. Sem essa configuração, o botão "Continuar com Google/Apple" vai abrir o fluxo OAuth mas voltar com erro.
+
+### Google
+
+**1 — Google Cloud Console**
+1. Acesse https://console.cloud.google.com → crie (ou selecione) um projeto
+2. Vá em **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+3. Tipo de aplicação: **Web application**
+4. Em **Authorized redirect URIs**, adicione:
+   ```
+   https://SEU_PROJECT_REF.supabase.co/auth/v1/callback
+   ```
+5. Anote o **Client ID** e o **Client Secret**
+
+**2 — Supabase Dashboard**
+1. Acesse seu projeto em https://supabase.com → **Authentication → Providers → Google**
+2. Ative (toggle **Enable**) e cole o Client ID e Client Secret do passo anterior
+3. Salve
+
+**3 — Redirect URLs (localhost)**
+1. Ainda no Supabase → **Authentication → URL Configuration**
+2. Em **Redirect URLs**, adicione:
+   ```
+   http://localhost:5173/**
+   ```
+3. Confirme que o **Site URL** seja `http://localhost:5173` (para desenvolvimento local)
+
+---
+
+### Apple
+
+1. Acesse https://developer.apple.com → **Certificates, IDs & Profiles → Keys → crie uma key** com "Sign in with Apple"
+2. No Supabase → **Authentication → Providers → Apple**: cole o Key ID, Team ID, Client ID (Bundle ID) e o arquivo `.p8`
+3. Adicione `http://localhost:5173/**` nas Redirect URLs (mesmo passo acima)
+
+> ⚠️ Apple OAuth exige conta paga no Apple Developer Program (US$ 99/ano).
+
+---
+
 ## Outros comandos úteis
 
 | Comando | O que faz |
