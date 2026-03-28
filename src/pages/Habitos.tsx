@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Brain, Flame, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,9 @@ import { format } from "date-fns";
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
 const Habitos = () => {
-  const { habits, addHabit, deleteHabit, toggleToday, getStreak, getLast7Days, todayStats } = useHabits();
+  const { habits, addHabit, deleteHabit, toggleToday, getStreak, getLast7Days, todayStats, isLoading } = useHabits();
+
+  if (isLoading) return <PageSkeleton rows={4} />;
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");

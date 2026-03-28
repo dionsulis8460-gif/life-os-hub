@@ -6,6 +6,25 @@ import { StudySession, Subject, Topic, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// ─── Helper ──────────────────────────────────────────────────────────────────
+
+function rowToSubject(row: Record<string, unknown>): Subject {
+  const topics = (row.study_topics as Array<Record<string, unknown>> | null) ?? [];
+  return {
+    id: row.id as string,
+    label: row.label as string,
+    color: row.color as string,
+    completed: row.completed as boolean,
+    topics: topics
+      .sort((a, b) => (a.position as number) - (b.position as number))
+      .map((t) => ({
+        id: t.id as string,
+        name: t.name as string,
+        completed: t.completed as boolean,
+      })) as Array<Topic & { id: string }>,
+  };
+}
+
 // ─── useSubjects ────────────────────────────────────────────────────────────
 
 export function useSubjects() {
@@ -13,7 +32,7 @@ export function useSubjects() {
   const queryClient = useQueryClient();
   const KEY = ['study_subjects', user?.id];
 
-  const { data: subjects = [] } = useQuery<Subject[]>({
+  const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({
     queryKey: KEY,
     queryFn: async () => {
       const { data: subs, error: subsError } = await supabase
@@ -47,91 +66,199 @@ export function useSubjects() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: KEY });
 
-  const addSubject = useCallback(async (label: string, color: string) => {
-    const position = subjects.length;
-    const { error } = await supabase
-      .from('study_subjects')
-      .insert({ user_id: user!.id, label, color, completed: false, position });
-    if (error) throw error;
-    invalidate();
-  }, [subjects, user]);
+  // ─── Add subject ────────────────────────────────────────────────────────────
+  const addSubjectMut = useMutation({
+    mutationFn: async ({ label, color }: { label: string; color: string }) => {
+      const { error } = await supabase.from('study_subjects').insert({
+        user_id: user!.id,
+        label,
+        color,
+        completed: false,
+        position: subjects.length,
+      });
+      if (error) throw error;
+    },
+    onMutate: async ({ label, color }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) => [
+        ...old,
+        { id: crypto.randomUUID(), label, color, completed: false, topics: [] },
+      ]);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
 
-  const deleteSubject = useCallback(async (id: string) => {
-    const { error } = await supabase.from('study_subjects').delete().eq('id', id);
-    if (error) throw error;
-    queryClient.setQueryData<Subject[]>(KEY, (old = []) => old.filter((s) => s.id !== id));
-    invalidate();
-  }, [user]);
+  // ─── Delete subject ─────────────────────────────────────────────────────────
+  const deleteSubjectMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('study_subjects').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) => old.filter((s) => s.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
 
-  const toggleSubjectCompleted = useCallback(async (id: string) => {
-    const subject = subjects.find((s) => s.id === id);
-    if (!subject) return;
-    const newCompleted = !subject.completed;
-    const { error } = await supabase
-      .from('study_subjects')
-      .update({ completed: newCompleted })
-      .eq('id', id);
-    if (error) throw error;
-    // Also toggle all topics
-    if (subject.topics.length > 0) {
-      await supabase
+  // ─── Toggle subject completed ───────────────────────────────────────────────
+  const toggleSubjectMut = useMutation({
+    mutationFn: async (id: string) => {
+      const subject = subjects.find((s) => s.id === id);
+      if (!subject) return;
+      const newCompleted = !subject.completed;
+      const { error } = await supabase
+        .from('study_subjects')
+        .update({ completed: newCompleted })
+        .eq('id', id);
+      if (error) throw error;
+      if (subject.topics.length > 0) {
+        const topicIds = subject.topics
+          .map((t) => (t as Topic & { id?: string }).id)
+          .filter((x): x is string => !!x);
+        if (topicIds.length > 0) {
+          await supabase
+            .from('study_topics')
+            .update({ completed: newCompleted })
+            .in('id', topicIds);
+        }
+      }
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) => {
+          if (s.id !== id) return s;
+          const newCompleted = !s.completed;
+          return {
+            ...s,
+            completed: newCompleted,
+            topics: s.topics.map((t) => ({ ...t, completed: newCompleted })),
+          };
+        })
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Add topic ──────────────────────────────────────────────────────────────
+  const addTopicMut = useMutation({
+    mutationFn: async ({ subjectId, name }: { subjectId: string; name: string }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      const position = subject ? subject.topics.length : 0;
+      const { error } = await supabase
+        .from('study_topics')
+        .insert({ subject_id: subjectId, name, completed: false, position });
+      if (error) throw error;
+    },
+    onMutate: async ({ subjectId, name }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) =>
+          s.id === subjectId
+            ? {
+                ...s,
+                topics: [
+                  ...s.topics,
+                  { id: crypto.randomUUID(), name, completed: false },
+                ],
+              }
+            : s
+        )
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Delete topic ───────────────────────────────────────────────────────────
+  const deleteTopicMut = useMutation({
+    mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      if (!subject) return;
+      const topic = subject.topics[topicIndex] as Topic & { id?: string };
+      if (!topic?.id) return;
+      const { error } = await supabase.from('study_topics').delete().eq('id', topic.id);
+      if (error) throw error;
+    },
+    onMutate: async ({ subjectId, topicIndex }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) =>
+          s.id === subjectId
+            ? { ...s, topics: s.topics.filter((_, i) => i !== topicIndex) }
+            : s
+        )
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Toggle topic completed ─────────────────────────────────────────────────
+  const toggleTopicMut = useMutation({
+    mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      if (!subject) return;
+      const topic = subject.topics[topicIndex] as Topic & { id?: string };
+      if (!topic?.id) return;
+      const newCompleted = !topic.completed;
+      const { error } = await supabase
         .from('study_topics')
         .update({ completed: newCompleted })
-        .in('id', subject.topics.map((t) => (t as Topic).id).filter(Boolean) as string[]);
-    }
-    invalidate();
-  }, [subjects, user]);
-
-  const addTopic = useCallback(async (subjectId: string, topicName: string) => {
-    const subject = subjects.find((s) => s.id === subjectId);
-    const position = subject ? subject.topics.length : 0;
-    const { error } = await supabase
-      .from('study_topics')
-      .insert({ subject_id: subjectId, name: topicName, completed: false, position });
-    if (error) throw error;
-    invalidate();
-  }, [subjects, user]);
-
-  const deleteTopic = useCallback(async (subjectId: string, topicIndex: number) => {
-    const subject = subjects.find((s) => s.id === subjectId);
-    if (!subject) return;
-    const topic = subject.topics[topicIndex];
-    if (!topic?.id) return;
-    const { error } = await supabase.from('study_topics').delete().eq('id', topic.id);
-    if (error) throw error;
-    invalidate();
-  }, [subjects, user]);
-
-  const toggleTopicCompleted = useCallback(async (subjectId: string, topicIndex: number) => {
-    const subject = subjects.find((s) => s.id === subjectId);
-    if (!subject) return;
-    const topic = subject.topics[topicIndex];
-    if (!topic?.id) return;
-    const newCompleted = !topic.completed;
-    const { error } = await supabase
-      .from('study_topics')
-      .update({ completed: newCompleted })
-      .eq('id', topic.id);
-    if (error) throw error;
-    // Check if all topics are now done → mark subject complete
-    const newTopics = subject.topics.map((t, i) =>
-      i === topicIndex ? { ...t, completed: newCompleted } : t
-    );
-    const allDone = newTopics.length > 0 && newTopics.every((t) => t.completed);
-    if (allDone !== subject.completed) {
-      await supabase.from('study_subjects').update({ completed: allDone }).eq('id', subjectId);
-    }
-    invalidate();
-  }, [subjects, user]);
+        .eq('id', topic.id);
+      if (error) throw error;
+      const newTopics = subject.topics.map((t, i) =>
+        i === topicIndex ? { ...t, completed: newCompleted } : t
+      );
+      const allDone = newTopics.length > 0 && newTopics.every((t) => t.completed);
+      if (allDone !== subject.completed) {
+        await supabase.from('study_subjects').update({ completed: allDone }).eq('id', subjectId);
+      }
+    },
+    onMutate: async ({ subjectId, topicIndex }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) => {
+          if (s.id !== subjectId) return s;
+          const newTopics = s.topics.map((t, i) =>
+            i === topicIndex ? { ...t, completed: !t.completed } : t
+          );
+          const allDone = newTopics.length > 0 && newTopics.every((t) => t.completed);
+          return { ...s, topics: newTopics, completed: allDone };
+        })
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
 
   return {
     subjects,
-    addSubject,
-    deleteSubject,
-    addTopic,
-    deleteTopic,
-    toggleSubjectCompleted,
-    toggleTopicCompleted,
+    isLoading: subjectsLoading,
+    addSubject: (label: string, color: string) => addSubjectMut.mutate({ label, color }),
+    deleteSubject: (id: string) => deleteSubjectMut.mutate(id),
+    toggleSubjectCompleted: (id: string) => toggleSubjectMut.mutate(id),
+    addTopic: (subjectId: string, name: string) => addTopicMut.mutate({ subjectId, name }),
+    deleteTopic: (subjectId: string, topicIndex: number) =>
+      deleteTopicMut.mutate({ subjectId, topicIndex }),
+    toggleTopicCompleted: (subjectId: string, topicIndex: number) =>
+      toggleTopicMut.mutate({ subjectId, topicIndex }),
   };
 }
 
@@ -142,7 +269,7 @@ export function useStudy() {
   const queryClient = useQueryClient();
   const KEY = ['study_sessions', user?.id];
 
-  const { data: sessions = [] } = useQuery<StudySession[]>({
+  const { data: sessions = [], isLoading: sessionsLoading } = useQuery<StudySession[]>({
     queryKey: KEY,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -235,6 +362,7 @@ export function useStudy() {
     .reduce((sum, s) => sum + s.duration, 0);
 
   return {
+    isLoading: sessionsLoading,
     sessions,
     addSession: (session: Omit<StudySession, 'id'>) => addSessionMut.mutate(session),
     deleteSession: (id: string) => deleteSessionMut.mutate(id),
@@ -316,24 +444,5 @@ export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
     totalSeconds,
     workMinutes,
     changeWorkMinutes,
-  };
-}
-
-// ─── Helper ──────────────────────────────────────────────────────────────────
-
-function rowToSubject(row: Record<string, unknown>): Subject {
-  const topics = (row.study_topics as Array<Record<string, unknown>> | null) ?? [];
-  return {
-    id: row.id as string,
-    label: row.label as string,
-    color: row.color as string,
-    completed: row.completed as boolean,
-    topics: topics
-      .sort((a, b) => (a.position as number) - (b.position as number))
-      .map((t) => ({
-        id: t.id as string,
-        name: t.name as string,
-        completed: t.completed as boolean,
-      })) as Array<Topic & { id: string }>,
   };
 }

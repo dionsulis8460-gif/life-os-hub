@@ -21,7 +21,7 @@ export function useFinances() {
   const queryClient = useQueryClient();
   const KEY = ['transactions', user?.id];
 
-  const { data: transactions = [] } = useQuery<Transaction[]>({
+  const { data: transactions = [], isLoading, isError } = useQuery<Transaction[]>({
     queryKey: KEY,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -117,6 +117,8 @@ export function useFinances() {
   );
 
   return {
+    isLoading,
+    isError,
     transactions,
     currentMonth,
     totalIncome,

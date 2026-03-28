@@ -114,18 +114,26 @@ const Configuracoes = () => {
     if (!user) return;
     setExporting(true);
     try {
-      const [tasks, habits, completions, transactions, goals, milestones, meals, sessions, subjects] =
+      // Fetch goals first so we can use their IDs to fetch milestones.
+      const [tasks, habits, completions, transactions, goals, meals, sessions, subjects] =
         await Promise.all([
           supabase.from("tasks").select("*").eq("user_id", user.id),
           supabase.from("habits").select("*").eq("user_id", user.id),
           supabase.from("habit_completions").select("*").eq("user_id", user.id),
           supabase.from("transactions").select("*").eq("user_id", user.id),
           supabase.from("goals").select("*").eq("user_id", user.id),
-          supabase.from("milestones").select("*, goals!inner(user_id)").eq("goals.user_id", user.id),
           supabase.from("meals").select("*").eq("user_id", user.id),
           supabase.from("study_sessions").select("*").eq("user_id", user.id),
           supabase.from("study_subjects").select("*, study_topics(*)").eq("user_id", user.id),
         ]);
+
+      // Fetch milestones scoped to the user's goals (milestones have no user_id,
+      // they are owned indirectly through the goal).
+      const goalIds = (goals.data ?? []).map((g: { id: string }) => g.id);
+      const milestonesRes =
+        goalIds.length > 0
+          ? await supabase.from("milestones").select("*").in("goal_id", goalIds)
+          : { data: [] };
 
       const exportData = {
         exportedAt: new Date().toISOString(),
@@ -135,7 +143,7 @@ const Configuracoes = () => {
         habit_completions: completions.data ?? [],
         transactions: transactions.data ?? [],
         goals: goals.data ?? [],
-        milestones: milestones.data ?? [],
+        milestones: milestonesRes.data ?? [],
         meals: meals.data ?? [],
         study_sessions: sessions.data ?? [],
         study_subjects: subjects.data ?? [],

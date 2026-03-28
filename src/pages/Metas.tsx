@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,16 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const Metas = () => {
-  const { goals, addGoal, deleteGoal, updateProgress, toggleComplete, addMilestone, toggleMilestone, deleteMilestone, activeGoals, completedGoals, avgProgress } = useGoals();
+  const { goals, addGoal, deleteGoal, updateProgress, toggleComplete, addMilestone, toggleMilestone, deleteMilestone, activeGoals, completedGoals, avgProgress, isLoading } = useGoals();
+
+  // Debounce progress slider to prevent flooding the DB with updates.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleProgressChange = useCallback((id: string, value: number) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateProgress(id, value), 400);
+  }, [updateProgress]);
+
+  if (isLoading) return <PageSkeleton rows={3} />;
 
   const [showDialog, setShowDialog] = useState(false);
   const [title, setTitle] = useState('');
@@ -204,7 +214,7 @@ const Metas = () => {
                             <div>
                               <Label className="text-xs text-muted-foreground">Progresso manual</Label>
                               <div className="flex items-center gap-3 mt-1">
-                                <Slider value={[goal.progress]} onValueChange={([v]) => updateProgress(goal.id, v)} max={100} step={1} className="flex-1" />
+                                <Slider value={[goal.progress]} onValueChange={([v]) => handleProgressChange(goal.id, v)} max={100} step={1} className="flex-1" />
                                 <span className="text-xs font-medium tabular-nums w-9">{goal.progress}%</span>
                               </div>
                             </div>

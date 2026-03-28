@@ -10,7 +10,7 @@ export function useTasks() {
   const queryClient = useQueryClient();
   const KEY = ["tasks", user?.id];
 
-  const { data: tasks = [] } = useQuery<Task[]>({
+  const { data: tasks = [], isLoading, isError } = useQuery<Task[]>({
     queryKey: KEY,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -104,6 +104,8 @@ export function useTasks() {
   });
 
   return {
+    isLoading,
+    isError,
     tasks,
     addTask: (task: TaskInsert) => addTaskMut.mutate(task),
     updateTask: (id: string, updates: Partial<TaskInsert>) => updateTaskMut.mutate({ id, updates }),
@@ -111,4 +113,3 @@ export function useTasks() {
     toggleDone: (id: string) => toggleDoneMut.mutate(id),
   };
 }
-

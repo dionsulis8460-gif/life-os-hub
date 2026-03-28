@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +23,7 @@ export function useMeals() {
   const queryClient = useQueryClient();
   const KEY = ['meals', user?.id];
 
-  const { data: meals = [] } = useQuery<Meal[]>({
+  const { data: meals = [], isLoading, isError } = useQuery<Meal[]>({
     queryKey: KEY,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -94,6 +93,8 @@ export function useMeals() {
   });
 
   return {
+    isLoading,
+    isError,
     meals,
     addMeal: (meal: Omit<Meal, 'id'>) => addMealMut.mutate(meal),
     deleteMeal: (id: string) => deleteMealMut.mutate(id),

@@ -21,7 +21,7 @@ export function useHabits() {
   const queryClient = useQueryClient();
   const KEY = ["habits", user?.id];
 
-  const { data: habits = [] } = useQuery<Habit[]>({
+  const { data: habits = [], isLoading, isError } = useQuery<Habit[]>({
     queryKey: KEY,
     queryFn: async () => {
       const [habitsRes, completionsRes] = await Promise.all([
@@ -163,6 +163,8 @@ export function useHabits() {
   }, [habits, todayStr]);
 
   return {
+    isLoading,
+    isError,
     habits,
     addHabit: (h: HabitInsert) => addHabitMut.mutate(h),
     deleteHabit: (id: string) => deleteHabitMut.mutate(id),
