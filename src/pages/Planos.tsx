@@ -54,6 +54,7 @@ const plans = [
     highlighted: true,
     storeId: "lifeos_full_monthly",
     googlePlayId: "com.lifeos.hub",
+    // TODO: Replace with the real App Store ID once the app is registered with Apple.
     appleStoreId: "id000000000",
   },
   {

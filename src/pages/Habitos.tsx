@@ -7,18 +7,40 @@ import { Button } from "@/components/ui/button";
 import { useHabits } from "@/hooks/useHabits";
 import HabitCard from "@/components/habitos/HabitCard";
 import HabitDialog from "@/components/habitos/HabitDialog";
+import { Habit } from "@/types/habit";
 import { format } from "date-fns";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
 const Habitos = () => {
-  const { habits, addHabit, deleteHabit, toggleToday, getStreak, getLast7Days, todayStats, isLoading } = useHabits();
+  const { habits, addHabit, updateHabit, deleteHabit, toggleToday, getStreak, getLast7Days, todayStats, isLoading } = useHabits();
 
-  if (isLoading) return <PageSkeleton rows={4} />;
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const bestStreak = habits.reduce((max, h) => Math.max(max, getStreak(h)), 0);
+
+  const handleSave = (data: Omit<Habit, "id" | "createdAt" | "completedDates">) => {
+    if (editingHabit) {
+      updateHabit(editingHabit.id, data);
+    } else {
+      addHabit(data);
+    }
+    setEditingHabit(null);
+  };
+
+  const handleEdit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setEditingHabit(null);
+  };
+
+  if (isLoading) return <PageSkeleton rows={4} />;
 
   return (
     <div>
@@ -34,7 +56,7 @@ const Habitos = () => {
           <p className="text-muted-foreground text-sm">Construa e acompanhe seus hábitos diários.</p>
         </div>
         <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} transition={spring}>
-          <Button variant="hero" onClick={() => setDialogOpen(true)}>
+          <Button variant="hero" onClick={() => { setEditingHabit(null); setDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-1" /> Novo hábito
           </Button>
         </motion.div>
@@ -106,6 +128,7 @@ const Habitos = () => {
               last7Days={getLast7Days(habit)}
               isCompletedToday={habit.completedDates.includes(todayStr)}
               onToggle={toggleToday}
+              onEdit={handleEdit}
               onDelete={deleteHabit}
             />
           ))}
@@ -123,14 +146,19 @@ const Habitos = () => {
             </div>
             <h3 className="font-semibold mb-1">Nenhum hábito criado</h3>
             <p className="text-sm text-muted-foreground mb-4">Comece adicionando um hábito para acompanhar.</p>
-            <Button variant="hero" onClick={() => setDialogOpen(true)}>
+            <Button variant="hero" onClick={() => { setEditingHabit(null); setDialogOpen(true); }}>
               <Plus className="w-4 h-4 mr-1" /> Novo hábito
             </Button>
           </motion.div>
         )}
       </div>
 
-      <HabitDialog open={dialogOpen} onOpenChange={setDialogOpen} onSave={addHabit} />
+      <HabitDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogClose}
+        onSave={handleSave}
+        editHabit={editingHabit}
+      />
     </div>
   );
 };

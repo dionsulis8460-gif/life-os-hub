@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckSquare, Wallet, Brain, Target, BookOpen, Plus, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { CheckSquare, Wallet, Brain, Target, BookOpen, Plus, TrendingUp, TrendingDown, ArrowRight, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
@@ -7,6 +7,7 @@ import { useFinances } from "@/hooks/useFinances";
 import { useHabits } from "@/hooks/useHabits";
 import { useGoals } from "@/hooks/useGoals";
 import { useStudy } from "@/hooks/useStudy";
+import { useMeals } from "@/hooks/useMeals";
 import { format } from "date-fns";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -61,6 +62,10 @@ function formatMinutes(minutes: number): string {
   return `${h}h ${m}min`;
 }
 
+const MIN_BAR_PX = 8;   // minimum visible bar height (px) when there is data
+const MAX_BAR_PX = 40;  // maximum bar height (px) at 100 % of peak
+const EMPTY_BAR_PX = 4; // stub height (px) for days with no data
+
 const Dashboard = () => {
   const navigate = useNavigate();
 
@@ -69,6 +74,7 @@ const Dashboard = () => {
   const { habits, getStreak } = useHabits();
   const { activeGoals } = useGoals();
   const { todayMinutes, totalWeekMinutes, dailyData } = useStudy();
+  const { todayCalories, todayProtein, todayCarbs, todayFat } = useMeals();
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const pendingTasks = tasks.filter((t) => !t.done).slice(0, 3);
@@ -284,7 +290,7 @@ const Dashboard = () => {
                       className="w-full rounded-t-md accent-gradient"
                       initial={{ height: 0 }}
                       animate={{
-                        height: d.minutos > 0 ? `${Math.max(8, Math.round((d.minutos / maxDailyMins) * 40))}px` : "4px",
+                        height: d.minutos > 0 ? `${Math.max(MIN_BAR_PX, Math.round((d.minutos / maxDailyMins) * MAX_BAR_PX))}px` : `${EMPTY_BAR_PX}px`,
                       }}
                       transition={{ ...spring, delay: 0.3 + i * 0.05 }}
                       style={{
@@ -296,6 +302,43 @@ const Dashboard = () => {
                 ))}
               </div>
             </div>
+          </div>
+        </DashboardCard>
+
+        {/* Alimentação */}
+        <DashboardCard
+          title="Alimentação de Hoje"
+          icon={Utensils}
+          delay={0.3}
+          onNavigate={() => navigate("/app/alimentacao")}
+        >
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Calorias</p>
+              <p className="text-2xl font-bold tabular-nums">{todayCalories} <span className="text-sm font-normal text-muted-foreground">kcal</span></p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl bg-muted p-3 text-center">
+                <p className="text-[11px] text-muted-foreground mb-1">Proteína</p>
+                <p className="text-sm font-bold tabular-nums">{todayProtein}g</p>
+              </div>
+              <div className="rounded-xl bg-muted p-3 text-center">
+                <p className="text-[11px] text-muted-foreground mb-1">Carbos</p>
+                <p className="text-sm font-bold tabular-nums">{todayCarbs}g</p>
+              </div>
+              <div className="rounded-xl bg-muted p-3 text-center">
+                <p className="text-[11px] text-muted-foreground mb-1">Gordura</p>
+                <p className="text-sm font-bold tabular-nums">{todayFat}g</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground"
+              onClick={() => navigate("/app/alimentacao")}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Registrar refeição
+            </Button>
           </div>
         </DashboardCard>
       </div>

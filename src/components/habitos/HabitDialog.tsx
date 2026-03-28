@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,30 +14,51 @@ interface HabitDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (habit: Omit<Habit, "id" | "createdAt" | "completedDates">) => void;
+  /** When provided the dialog is in edit mode. */
+  editHabit?: Habit | null;
 }
 
-const HabitDialog = ({ open, onOpenChange, onSave }: HabitDialogProps) => {
+const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
+
+const HabitDialog = ({ open, onOpenChange, onSave, editHabit }: HabitDialogProps) => {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState(HABIT_ICONS[0]);
   const [color, setColor] = useState(HABIT_COLORS[0]);
   const [frequency, setFrequency] = useState<Habit["frequency"]>("daily");
 
+  // Pre-populate fields when editing an existing habit.
+  useEffect(() => {
+    if (editHabit) {
+      setName(editHabit.name);
+      setIcon(editHabit.icon);
+      setColor(editHabit.color);
+      setFrequency(editHabit.frequency);
+    } else {
+      setName("");
+      setIcon(HABIT_ICONS[0]);
+      setColor(HABIT_COLORS[0]);
+      setFrequency("daily");
+    }
+  }, [editHabit, open]);
+
   const handleSave = () => {
     if (!name.trim()) return;
     onSave({ name: name.trim(), icon, color, frequency });
-    setName("");
-    setIcon(HABIT_ICONS[0]);
-    setColor(HABIT_COLORS[0]);
-    setFrequency("daily");
     onOpenChange(false);
   };
+
+  const isEdit = !!editHabit;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-3xl bg-card border-0 shadow-card-hover sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Novo hábito</DialogTitle>
-          <DialogDescription>Defina um hábito para acompanhar diariamente.</DialogDescription>
+          <DialogTitle>{isEdit ? "Editar hábito" : "Novo hábito"}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? "Altere as informações do hábito."
+              : "Defina um hábito para acompanhar diariamente."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -103,9 +124,13 @@ const HabitDialog = ({ open, onOpenChange, onSave }: HabitDialogProps) => {
         </div>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)} className="shadow-subtle">Cancelar</Button>
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} transition={{ type: "spring", duration: 0.4, bounce: 0 }}>
-            <Button variant="hero" onClick={handleSave} disabled={!name.trim()}>Criar hábito</Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} className="shadow-subtle">
+            Cancelar
+          </Button>
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }} transition={spring}>
+            <Button variant="hero" onClick={handleSave} disabled={!name.trim()}>
+              {isEdit ? "Salvar" : "Criar hábito"}
+            </Button>
           </motion.div>
         </DialogFooter>
       </DialogContent>

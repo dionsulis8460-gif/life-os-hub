@@ -120,6 +120,23 @@ export function useHabits() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
+  const updateHabitMut = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: HabitInsert }) => {
+      const { error } = await supabase.from("habits").update(updates).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Habit[]>(KEY);
+      queryClient.setQueryData<Habit[]>(KEY, (old = []) =>
+        old.map((h) => (h.id === id ? { ...h, ...updates } : h))
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+
   const getStreak = (habit: Habit): number => {
     let streak = 0;
     let day = new Date();
@@ -167,6 +184,7 @@ export function useHabits() {
     isError,
     habits,
     addHabit: (h: HabitInsert) => addHabitMut.mutate(h),
+    updateHabit: (id: string, updates: HabitInsert) => updateHabitMut.mutate({ id, updates }),
     deleteHabit: (id: string) => deleteHabitMut.mutate(id),
     toggleToday: (id: string) => toggleTodayMut.mutate(id),
     getStreak,
