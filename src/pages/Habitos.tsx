@@ -163,10 +163,14 @@ const Habitos = () => {
   );
 };
 
-const HabitosPage = () => (
-  <ModuleGate module="habitos" moduleName="Hábitos">
-    <Habitos />
-  </ModuleGate>
-);
+const HabitosPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check.
+  useHabits();
+  return (
+    <ModuleGate module="habitos" moduleName="Hábitos">
+      <Habitos />
+    </ModuleGate>
+  );
+};
 
 export default HabitosPage;

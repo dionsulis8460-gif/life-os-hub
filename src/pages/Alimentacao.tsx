@@ -216,10 +216,14 @@ const Alimentacao = () => {
   );
 };
 
-const AlimentacaoPage = () => (
-  <ModuleGate module="alimentacao" moduleName="Alimentação">
-    <Alimentacao />
-  </ModuleGate>
-);
+const AlimentacaoPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check.
+  useMeals();
+  return (
+    <ModuleGate module="alimentacao" moduleName="Alimentação">
+      <Alimentacao />
+    </ModuleGate>
+  );
+};
 
 export default AlimentacaoPage;

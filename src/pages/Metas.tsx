@@ -32,8 +32,6 @@ const Metas = () => {
     debounceRef.current = setTimeout(() => updateProgress(id, value), 400);
   }, [updateProgress]);
 
-  if (isLoading) return <PageSkeleton rows={3} />;
-
   const [showDialog, setShowDialog] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -45,6 +43,8 @@ const Metas = () => {
   const [newMilestone, setNewMilestone] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
   const [celebrationData, setCelebrationData] = useState<{ open: boolean; title: string; number: number }>({ open: false, title: '', number: 0 });
+
+  if (isLoading) return <PageSkeleton rows={3} />;
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setCategory('pessoal'); setDeadline(undefined); setProgress(0);
@@ -378,10 +378,14 @@ const Metas = () => {
   );
 };
 
-const MetasPage = () => (
-  <ModuleGate module="metas" moduleName="Metas">
-    <Metas />
-  </ModuleGate>
-);
+const MetasPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check.
+  useGoals();
+  return (
+    <ModuleGate module="metas" moduleName="Metas">
+      <Metas />
+    </ModuleGate>
+  );
+};
 
 export default MetasPage;

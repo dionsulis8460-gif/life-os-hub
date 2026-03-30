@@ -24,7 +24,6 @@ type FilterPriority = "all" | Priority;
 const Rotina = () => {
   const { tasks, addTask, updateTask, deleteTask, toggleDone, isLoading } = useTasks();
 
-  if (isLoading) return <PageSkeleton rows={5} />;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -67,6 +66,8 @@ const Rotina = () => {
     setEditingTask(null);
     setDialogOpen(true);
   };
+
+  if (isLoading) return <PageSkeleton rows={5} />;
 
   return (
     <div>
@@ -215,10 +216,15 @@ const Rotina = () => {
     </div>
   );
 };
-const RotinaPage = () => (
-  <ModuleGate module="rotina" moduleName="Rotina">
-    <Rotina />
-  </ModuleGate>
-);
+const RotinaPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check so
+  // data is ready (or already in-flight) by the time the inner component mounts.
+  useTasks();
+  return (
+    <ModuleGate module="rotina" moduleName="Rotina">
+      <Rotina />
+    </ModuleGate>
+  );
+};
 
 export default RotinaPage;

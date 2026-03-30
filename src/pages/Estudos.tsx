@@ -20,8 +20,7 @@ const Estudos = () => {
   const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes, isLoading: sessionsLoading } = useStudy();
   const { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted, isLoading: subjectsLoading } = useSubjects();
 
-  if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
-  const [selectedSubject, setSelectedSubject] = useState<string>(subjects[0]?.label || '');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [useTimer, setUseTimer] = useState(true);
   const pomodoro = usePomodoro(25, 5);
@@ -39,7 +38,10 @@ const Estudos = () => {
   // Free session tracking
   const [freeSessionMinutes, setFreeSessionMinutes] = useState('');
 
-  const currentSubject = subjects.find(s => s.label === selectedSubject);
+  if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
+
+  // Fall back to the first subject when none is explicitly selected yet.
+  const currentSubject = subjects.find(s => s.label === selectedSubject) ?? subjects[0] ?? null;
   const currentTopics = currentSubject?.topics || [];
 
   const handleAddSubject = () => {
@@ -502,10 +504,15 @@ const Estudos = () => {
   );
 };
 
-const EstudosPage = () => (
-  <ModuleGate module="estudos" moduleName="Estudos">
-    <Estudos />
-  </ModuleGate>
-);
+const EstudosPage = () => {
+  // Pre-warm both caches in parallel with ModuleGate's subscription check.
+  useStudy();
+  useSubjects();
+  return (
+    <ModuleGate module="estudos" moduleName="Estudos">
+      <Estudos />
+    </ModuleGate>
+  );
+};
 
 export default EstudosPage;
