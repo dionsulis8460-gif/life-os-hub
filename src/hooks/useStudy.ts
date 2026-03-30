@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { StudySession, Subject, Topic, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
+import { localRead, localWrite } from '@/lib/local-store';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
@@ -31,10 +33,29 @@ export function useSubjects() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ['study_subjects', user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.studySubjects;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<Subject[]>(KEY) ?? []);
 
   const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) {
+        const stored = localRead<Subject>(LKEY);
+        if (stored.length > 0) return stored;
+        // Seed defaults on first use
+        const defaults: Subject[] = DEFAULT_SUBJECTS.map((s) => ({
+          id: crypto.randomUUID(),
+          label: s.label,
+          color: s.color,
+          completed: false,
+          topics: [],
+        }));
+        localWrite(LKEY, defaults);
+        return defaults;
+      }
       const { data: subs, error: subsError } = await supabase
         .from('study_subjects')
         .select('*, study_topics(*)')
@@ -61,7 +82,7 @@ export function useSubjects() {
 
       return subs.map(rowToSubject);
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: KEY });
@@ -69,6 +90,7 @@ export function useSubjects() {
   // ─── Add subject ────────────────────────────────────────────────────────────
   const addSubjectMut = useMutation({
     mutationFn: async ({ label, color }: { label: string; color: string }) => {
+      if (isLocal) return;
       const { error } = await supabase.from('study_subjects').insert({
         user_id: user!.id,
         label,
@@ -88,12 +110,14 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Delete subject ─────────────────────────────────────────────────────────
   const deleteSubjectMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from('study_subjects').delete().eq('id', id);
       if (error) throw error;
     },
@@ -104,12 +128,14 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Toggle subject completed ───────────────────────────────────────────────
   const toggleSubjectMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const subject = subjects.find((s) => s.id === id);
       if (!subject) return;
       const newCompleted = !subject.completed;
@@ -147,12 +173,14 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Add topic ──────────────────────────────────────────────────────────────
   const addTopicMut = useMutation({
     mutationFn: async ({ subjectId, name }: { subjectId: string; name: string }) => {
+      if (isLocal) return;
       const subject = subjects.find((s) => s.id === subjectId);
       const position = subject ? subject.topics.length : 0;
       const { error } = await supabase
@@ -179,12 +207,14 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Delete topic ───────────────────────────────────────────────────────────
   const deleteTopicMut = useMutation({
     mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      if (isLocal) return;
       const subject = subjects.find((s) => s.id === subjectId);
       if (!subject) return;
       const topic = subject.topics[topicIndex] as Topic & { id?: string };
@@ -205,12 +235,14 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Toggle topic completed ─────────────────────────────────────────────────
   const toggleTopicMut = useMutation({
     mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      if (isLocal) return;
       const subject = subjects.find((s) => s.id === subjectId);
       if (!subject) return;
       const topic = subject.topics[topicIndex] as Topic & { id?: string };
@@ -245,6 +277,7 @@ export function useSubjects() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
@@ -268,10 +301,16 @@ export function useStudy() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ['study_sessions', user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.studySessions;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<StudySession[]>(KEY) ?? []);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery<StudySession[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) return localRead<StudySession>(LKEY);
       const { data, error } = await supabase
         .from('study_sessions')
         .select('*')
@@ -288,11 +327,12 @@ export function useStudy() {
         completedPomodoros: r.completed_pomodoros,
       }));
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const addSessionMut = useMutation({
     mutationFn: async (session: Omit<StudySession, 'id'>) => {
+      if (isLocal) return;
       const { error } = await supabase.from('study_sessions').insert({
         user_id: user!.id,
         subject: session.subject,
@@ -314,11 +354,13 @@ export function useStudy() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const deleteSessionMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from('study_sessions').delete().eq('id', id);
       if (error) throw error;
     },
@@ -329,6 +371,7 @@ export function useStudy() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 

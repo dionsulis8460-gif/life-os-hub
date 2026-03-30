@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Meal } from '@/types/meal';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
+import { localRead, localWrite } from '@/lib/local-store';
 
 function rowToMeal(r: Record<string, unknown>): Meal {
   return {
@@ -22,10 +24,16 @@ export function useMeals() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ['meals', user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.meals;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<Meal[]>(KEY) ?? []);
 
   const { data: meals = [], isLoading, isError } = useQuery<Meal[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) return localRead<Meal>(LKEY);
       const { data, error } = await supabase
         .from('meals')
         .select('*')
@@ -34,11 +42,12 @@ export function useMeals() {
       if (error) throw error;
       return (data ?? []).map(rowToMeal);
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const addMealMut = useMutation({
     mutationFn: async (meal: Omit<Meal, 'id'>) => {
+      if (isLocal) return;
       const { error } = await supabase
         .from('meals')
         .insert({ ...meal, user_id: user!.id });
@@ -54,11 +63,13 @@ export function useMeals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const deleteMealMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from('meals').delete().eq('id', id);
       if (error) throw error;
     },
@@ -69,6 +80,7 @@ export function useMeals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 

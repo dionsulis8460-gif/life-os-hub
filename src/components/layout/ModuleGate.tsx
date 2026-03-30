@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -16,12 +16,42 @@ interface ModuleGateProps {
 }
 
 const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
-  const { hasModuleAccess, isLoading, subscription, isTrialActive, isLimitedFreeActive, limitedFreeDaysLeft, refetch } = useSubscription();
+  const { hasModuleAccess, isLoading, isError, subscription, isTrialActive, isLimitedFreeActive, limitedFreeDaysLeft, refetch } = useSubscription();
+
+  // In local-dev mode (Supabase not configured), bypass all subscription checks
+  // so every module is accessible without a backend connection.
+  if (!isSupabaseConfigured) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 rounded-lg accent-gradient animate-pulse" />
+      </div>
+    );
+  }
+
+  // If the subscription check failed AND there is no cached data, show a
+  // retry prompt instead of a false "module locked" screen. When stale data
+  // is still available (subscription !== undefined), fall through to the
+  // normal hasModuleAccess check so existing cached status is honored.
+  if (isError && !subscription) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          className="text-center space-y-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={spring}
+        >
+          <p className="text-muted-foreground text-sm">
+            Não foi possível verificar sua assinatura.
+          </p>
+          <Button variant="outline" onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
+        </motion.div>
       </div>
     );
   }

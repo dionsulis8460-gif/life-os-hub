@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Habit } from "@/types/habit";
 import { format, subDays, getDay } from "date-fns";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { localRead, localWrite } from "@/lib/local-store";
 
 /** Returns true if a habit is expected to be completed on the given date. */
 function isExpectedDay(habit: Habit, date: Date): boolean {
@@ -20,10 +22,16 @@ export function useHabits() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ["habits", user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.habits;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<Habit[]>(KEY) ?? []);
 
   const { data: habits = [], isLoading, isError } = useQuery<Habit[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) return localRead<Habit>(LKEY);
       const [habitsRes, completionsRes] = await Promise.all([
         supabase.from("habits").select("*").eq("user_id", user!.id).order("created_at"),
         supabase.from("habit_completions").select("*").eq("user_id", user!.id),
@@ -42,11 +50,12 @@ export function useHabits() {
           .map((c) => c.completed_date),
       }));
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const addHabitMut = useMutation({
     mutationFn: async (habit: HabitInsert) => {
+      if (isLocal) return;
       const { error } = await supabase.from("habits").insert({ ...habit, user_id: user!.id });
       if (error) throw error;
     },
@@ -60,11 +69,13 @@ export function useHabits() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const deleteHabitMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from("habits").delete().eq("id", id);
       if (error) throw error;
     },
@@ -75,11 +86,13 @@ export function useHabits() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const toggleTodayMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const today = format(new Date(), "yyyy-MM-dd");
       const habit = habits.find((h) => h.id === id);
       if (!habit) return;
@@ -117,11 +130,13 @@ export function useHabits() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const updateHabitMut = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: HabitInsert }) => {
+      if (isLocal) return;
       const { error } = await supabase.from("habits").update(updates).eq("id", id);
       if (error) throw error;
     },
@@ -134,6 +149,7 @@ export function useHabits() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 

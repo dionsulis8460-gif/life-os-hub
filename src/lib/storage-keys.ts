@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   meals: "lifeos-meals",
   studySubjects: "lifeos-study-subjects",
   studySessions: "lifeos-study-sessions",
+  onboarding: "lifeos-onboarding",
 } as const;
 
 /** Ordered list of every key – used by the "clear local data" action. */

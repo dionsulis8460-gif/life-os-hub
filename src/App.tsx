@@ -30,6 +30,15 @@ const queryClient = new QueryClient({
       staleTime: 2 * 60 * 1000,
       // Keep inactive query data in cache for 10 minutes after unmount.
       gcTime: 10 * 60 * 1000,
+      // Retry once instead of the default 3 times so a failed/slow Supabase
+      // request surfaces quickly and pages stop being stuck on the skeleton.
+      retry: 1,
+      retryDelay: 1000,
+      // Always attempt queries regardless of navigator.onLine so pages load
+      // even when the browser incorrectly reports the device as offline.
+      // Trade-off: users who are genuinely offline will see error/stale states
+      // rather than the "offline" placeholder React Query normally shows.
+      networkMode: "always",
     },
   },
 });

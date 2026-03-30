@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Transaction, TransactionType, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '@/types/finance';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
+import { localRead, localWrite } from '@/lib/local-store';
 
 function rowToTransaction(r: Record<string, unknown>): Transaction {
   return {
@@ -20,10 +22,16 @@ export function useFinances() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ['transactions', user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.finances;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<Transaction[]>(KEY) ?? []);
 
   const { data: transactions = [], isLoading, isError } = useQuery<Transaction[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) return localRead<Transaction>(LKEY);
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -32,11 +40,12 @@ export function useFinances() {
       if (error) throw error;
       return (data ?? []).map(rowToTransaction);
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const addTransactionMut = useMutation({
     mutationFn: async (data: Omit<Transaction, 'id' | 'createdAt'>) => {
+      if (isLocal) return;
       const { error } = await supabase.from('transactions').insert({ ...data, user_id: user!.id });
       if (error) throw error;
     },
@@ -50,11 +59,13 @@ export function useFinances() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
   const deleteTransactionMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
     },
@@ -65,6 +76,7 @@ export function useFinances() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
   });
 
