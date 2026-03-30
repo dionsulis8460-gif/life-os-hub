@@ -188,10 +188,14 @@ function Financas() {
   );
 }
 
-const FinancasPage = () => (
-  <ModuleGate module="financas" moduleName="Finanças">
-    <Financas />
-  </ModuleGate>
-);
+const FinancasPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check.
+  useFinances();
+  return (
+    <ModuleGate module="financas" moduleName="Finanças">
+      <Financas />
+    </ModuleGate>
+  );
+};
 
 export default FinancasPage;

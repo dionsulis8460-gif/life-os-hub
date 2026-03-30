@@ -378,10 +378,14 @@ const Metas = () => {
   );
 };
 
-const MetasPage = () => (
-  <ModuleGate module="metas" moduleName="Metas">
-    <Metas />
-  </ModuleGate>
-);
+const MetasPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check.
+  useGoals();
+  return (
+    <ModuleGate module="metas" moduleName="Metas">
+      <Metas />
+    </ModuleGate>
+  );
+};
 
 export default MetasPage;

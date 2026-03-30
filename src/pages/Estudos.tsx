@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
 import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,16 +38,10 @@ const Estudos = () => {
   // Free session tracking
   const [freeSessionMinutes, setFreeSessionMinutes] = useState('');
 
-  // Default to first subject once subjects finish loading
-  useEffect(() => {
-    if (!subjectsLoading && selectedSubject === '' && subjects.length > 0) {
-      setSelectedSubject(subjects[0].label);
-    }
-  }, [subjectsLoading, subjects, selectedSubject]);
-
   if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
 
-  const currentSubject = subjects.find(s => s.label === selectedSubject);
+  // Fall back to the first subject when none is explicitly selected yet.
+  const currentSubject = subjects.find(s => s.label === selectedSubject) ?? subjects[0] ?? null;
   const currentTopics = currentSubject?.topics || [];
 
   const handleAddSubject = () => {
@@ -510,10 +504,15 @@ const Estudos = () => {
   );
 };
 
-const EstudosPage = () => (
-  <ModuleGate module="estudos" moduleName="Estudos">
-    <Estudos />
-  </ModuleGate>
-);
+const EstudosPage = () => {
+  // Pre-warm both caches in parallel with ModuleGate's subscription check.
+  useStudy();
+  useSubjects();
+  return (
+    <ModuleGate module="estudos" moduleName="Estudos">
+      <Estudos />
+    </ModuleGate>
+  );
+};
 
 export default EstudosPage;

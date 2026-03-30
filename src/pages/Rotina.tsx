@@ -216,10 +216,15 @@ const Rotina = () => {
     </div>
   );
 };
-const RotinaPage = () => (
-  <ModuleGate module="rotina" moduleName="Rotina">
-    <Rotina />
-  </ModuleGate>
-);
+const RotinaPage = () => {
+  // Pre-warm the cache in parallel with ModuleGate's subscription check so
+  // data is ready (or already in-flight) by the time the inner component mounts.
+  useTasks();
+  return (
+    <ModuleGate module="rotina" moduleName="Rotina">
+      <Rotina />
+    </ModuleGate>
+  );
+};
 
 export default RotinaPage;
