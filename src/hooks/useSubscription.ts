@@ -24,7 +24,7 @@ export const useSubscription = () => {
   const queryClient = useQueryClient();
   const transitionAttempted = useRef(false);
 
-  const { data: subscription, isLoading, refetch } = useQuery({
+  const { data: subscription, isLoading, isError, refetch } = useQuery({
     queryKey: ["subscription", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -124,6 +124,7 @@ export const useSubscription = () => {
   return {
     subscription,
     isLoading,
+    isError,
     isTrialActive,
     isActive,
     isFullPlan,
