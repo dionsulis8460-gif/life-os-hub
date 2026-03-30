@@ -1,29 +1,79 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Meal } from '@/types/meal';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+function rowToMeal(r: Record<string, unknown>): Meal {
+  return {
+    id: r.id as string,
+    name: r.name as string,
+    type: r.type as Meal['type'],
+    calories: r.calories as number,
+    protein: r.protein as number,
+    carbs: r.carbs as number,
+    fat: r.fat as number,
+    date: r.date as string,
+  };
+}
+
 export function useMeals() {
-  const [meals, setMeals] = useState<Meal[]>(() => {
-    const saved = localStorage.getItem('meals-data');
-    return saved ? JSON.parse(saved) : [];
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const KEY = ['meals', user?.id];
+
+  const { data: meals = [], isLoading, isError } = useQuery<Meal[]>({
+    queryKey: KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('meals')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map(rowToMeal);
+    },
+    enabled: !!user,
   });
 
-  useEffect(() => {
-    localStorage.setItem('meals-data', JSON.stringify(meals));
-  }, [meals]);
+  const addMealMut = useMutation({
+    mutationFn: async (meal: Omit<Meal, 'id'>) => {
+      const { error } = await supabase
+        .from('meals')
+        .insert({ ...meal, user_id: user!.id });
+      if (error) throw error;
+    },
+    onMutate: async (meal) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Meal[]>(KEY);
+      queryClient.setQueryData<Meal[]>(KEY, (old = []) => [
+        { ...meal, id: crypto.randomUUID() },
+        ...old,
+      ]);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
 
-  const addMeal = useCallback((meal: Omit<Meal, 'id'>) => {
-    setMeals(prev => [{ ...meal, id: crypto.randomUUID() }, ...prev]);
-  }, []);
-
-  const deleteMeal = useCallback((id: string) => {
-    setMeals(prev => prev.filter(m => m.id !== id));
-  }, []);
+  const deleteMealMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('meals').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Meal[]>(KEY);
+      queryClient.setQueryData<Meal[]>(KEY, (old = []) => old.filter((m) => m.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
 
   const today = format(new Date(), 'yyyy-MM-dd');
-
-  const todayMeals = meals.filter(m => m.date.startsWith(today));
+  const todayMeals = meals.filter((m) => m.date.startsWith(today));
   const todayCalories = todayMeals.reduce((s, m) => s + m.calories, 0);
   const todayProtein = todayMeals.reduce((s, m) => s + m.protein, 0);
   const todayCarbs = todayMeals.reduce((s, m) => s + m.carbs, 0);
@@ -32,7 +82,7 @@ export function useMeals() {
   const dailyData = Array.from({ length: 7 }, (_, i) => {
     const day = subDays(new Date(), 6 - i);
     const dayStr = format(day, 'yyyy-MM-dd');
-    const dayMeals = meals.filter(m => m.date.startsWith(dayStr));
+    const dayMeals = meals.filter((m) => m.date.startsWith(dayStr));
     return {
       day: format(day, 'EEE', { locale: ptBR }),
       calorias: dayMeals.reduce((s, m) => s + m.calories, 0),
@@ -42,5 +92,17 @@ export function useMeals() {
     };
   });
 
-  return { meals, addMeal, deleteMeal, todayMeals, todayCalories, todayProtein, todayCarbs, todayFat, dailyData };
+  return {
+    isLoading,
+    isError,
+    meals,
+    addMeal: (meal: Omit<Meal, 'id'>) => addMealMut.mutate(meal),
+    deleteMeal: (id: string) => deleteMealMut.mutate(id),
+    todayMeals,
+    todayCalories,
+    todayProtein,
+    todayCarbs,
+    todayFat,
+    dailyData,
+  };
 }

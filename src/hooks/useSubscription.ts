@@ -32,14 +32,27 @@ export const useSubscription = () => {
         .from("subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
+
+      // #6 — Auto-create subscription row if the DB trigger hasn't run yet
+      // (e.g. existing users before the trigger was added, or trigger failure).
+      if (!data) {
+        const { data: created, error: insertError } = await supabase
+          .from("subscriptions")
+          .insert({ user_id: user.id })
+          .select("*")
+          .single();
+        if (insertError) throw insertError;
+        return created as Subscription;
+      }
+
       return data as Subscription;
     },
     enabled: !!user,
   });
 
-  const transitionMutation = useMutation({
+  const { mutate: runTrialTransition } = useMutation({
     mutationFn: async (subscriptionId: string) => {
       const limitedFreeEndsAt = new Date();
       limitedFreeEndsAt.setDate(limitedFreeEndsAt.getDate() + 7);
@@ -67,13 +80,15 @@ export const useSubscription = () => {
   const isTrialExpired =
     subscription?.status === "trial" && !isTrialActive;
 
-  // Auto-transition expired trial → limited_free
+  // Auto-transition expired trial → limited_free.
+  // `transitionAttempted` ref ensures the mutation fires at most once even if
+  // the effect re-runs because `subscription` (or any dependency) changed.
   useEffect(() => {
     if (isTrialExpired && subscription && !transitionAttempted.current) {
       transitionAttempted.current = true;
-      transitionMutation.mutate(subscription.id);
+      runTrialTransition(subscription.id);
     }
-  }, [isTrialExpired, subscription?.id]);
+  }, [isTrialExpired, subscription, runTrialTransition]);
 
   const isActive = subscription?.status === "active";
   const isFullPlan = subscription?.plan === "full";

@@ -1,0 +1,53 @@
+appId: com.lifeoshub.app
+productName: LifeOS Hub
+copyright: Copyright © 2024 LifeOS Hub
+
+# --- Output directories ---
+directories:
+  output: release
+  buildResources: build-resources
+
+# --- Files to bundle ---
+files:
+  - dist/**/*
+  - dist-electron/**/*
+
+# --- Windows ---
+win:
+  target:
+    - target: nsis      # Full installer (recommended)
+    - target: portable  # Standalone executable (no install needed)
+  icon: build-resources/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+
+# --- macOS (bonus: same build pipeline works for Mac) ---
+mac:
+  target:
+    - target: dmg
+  icon: build-resources/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+# --- Linux ---
+linux:
+  target:
+    - target: AppImage
+    - target: deb
+  icon: build-resources/icon.png
+  category: Productivity

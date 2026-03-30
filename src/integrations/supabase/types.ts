@@ -14,6 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
+      habit_completions: {
+        Row: {
+          completed_date: string
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          completed_date: string
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          completed_date?: string
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      habits: {
+        Row: {
+          color: string
+          created_at: string
+          frequency: string
+          icon: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          category: string
+          completed: boolean
+          created_at: string
+          deadline: string
+          description: string
+          id: string
+          progress: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          completed?: boolean
+          created_at?: string
+          deadline: string
+          description?: string
+          id?: string
+          progress?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed?: boolean
+          created_at?: string
+          deadline?: string
+          description?: string
+          id?: string
+          progress?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meals: {
+        Row: {
+          calories: number
+          carbs: number
+          date: string
+          fat: number
+          id: string
+          name: string
+          protein: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          calories?: number
+          carbs?: number
+          date?: string
+          fat?: number
+          id?: string
+          name: string
+          protein?: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          calories?: number
+          carbs?: number
+          date?: string
+          fat?: number
+          id?: string
+          name?: string
+          protein?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          completed: boolean
+          goal_id: string
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          completed?: boolean
+          goal_id: string
+          id?: string
+          position?: number
+          title: string
+        }
+        Update: {
+          completed?: boolean
+          goal_id?: string
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -88,6 +251,164 @@ export type Database = {
           trial_ends_at?: string
           trial_started_at?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          completed_pomodoros: number
+          date: string
+          duration: number
+          id: string
+          subject: string
+          topic: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          completed_pomodoros?: number
+          date?: string
+          duration: number
+          id?: string
+          subject: string
+          topic?: string | null
+          type?: string
+          user_id: string
+        }
+        Update: {
+          completed_pomodoros?: number
+          date?: string
+          duration?: number
+          id?: string
+          subject?: string
+          topic?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_subjects: {
+        Row: {
+          color: string
+          completed: boolean
+          id: string
+          label: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color: string
+          completed?: boolean
+          id?: string
+          label: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          completed?: boolean
+          id?: string
+          label?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_topics: {
+        Row: {
+          completed: boolean
+          id: string
+          name: string
+          position: number
+          subject_id: string
+        }
+        Insert: {
+          completed?: boolean
+          id?: string
+          name: string
+          position?: number
+          subject_id: string
+        }
+        Update: {
+          completed?: boolean
+          id?: string
+          name?: string
+          position?: number
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_topics_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "study_subjects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          description: string
+          done: boolean
+          id: string
+          priority: string
+          time: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          done?: boolean
+          id?: string
+          priority?: string
+          time?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          done?: boolean
+          id?: string
+          priority?: string
+          time?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          type?: string
           user_id?: string
         }
         Relationships: []

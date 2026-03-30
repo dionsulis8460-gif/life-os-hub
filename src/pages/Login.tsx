@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -13,8 +12,38 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
+
+  // Detect OAuth errors returned via URL hash (e.g. provider not configured,
+  // redirect URL not whitelisted, or user denied access).
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const error = params.get("error");
+    const description = params.get("error_description");
+    if (error) {
+      const msg = description
+        ? decodeURIComponent(description.replace(/\+/g, " "))
+        : error;
+      if (
+        error === "provider_disabled" ||
+        msg.toLowerCase().includes("provider") ||
+        msg.toLowerCase().includes("not enabled")
+      ) {
+        toast.error(
+          "Login com Google/Apple não está configurado no projeto Supabase. Ative o provedor em Authentication → Providers e adicione http://localhost:5173 às Redirect URLs."
+        );
+      } else if (error === "access_denied") {
+        toast.error("Acesso negado. Verifique as permissões do aplicativo no Google/Apple.");
+      } else {
+        toast.error(`Erro de autenticação: ${msg}`);
+      }
+      // Clean up the hash so the error doesn't persist on reload
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +66,7 @@ const Login = () => {
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
-    const { error } = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
-    });
+    const { error } = await signInWithOAuth(provider);
     if (error) {
       toast.error(`Erro ao entrar com ${provider === "google" ? "Google" : "Apple"}.`);
     }

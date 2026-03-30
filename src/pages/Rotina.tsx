@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Filter, CheckSquare } from "lucide-react";
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,7 +22,9 @@ type FilterStatus = "all" | "pending" | "done";
 type FilterPriority = "all" | Priority;
 
 const Rotina = () => {
-  const { tasks, addTask, updateTask, deleteTask, toggleDone } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask, toggleDone, isLoading } = useTasks();
+
+  if (isLoading) return <PageSkeleton rows={5} />;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");

@@ -11,6 +11,8 @@ import {
   Settings,
   CreditCard,
   LogOut,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import TrialAlertBanner from "./TrialAlertBanner";
@@ -59,7 +61,7 @@ const AppLayout = () => {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? "text-foreground shadow-subtle bg-sidebar-accent"
                     : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50"
@@ -111,9 +113,9 @@ const AppLayout = () => {
       </aside>
 
       {/* Mobile bottom nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar/95 backdrop-blur-xl" style={{ boxShadow: "var(--shadow-md)" }}>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar/95 backdrop-blur-xl mobile-bottom-nav" style={{ boxShadow: "var(--shadow-md)" }}>
         <div className="flex justify-around py-2">
-          {navItems.slice(0, 5).map((item) => (
+          {navItems.slice(0, 4).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -128,8 +130,74 @@ const AppLayout = () => {
               <span>{item.label}</span>
             </NavLink>
           ))}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="flex flex-col items-center gap-1 px-2 py-1.5 text-xs text-sidebar-foreground"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            <span>Mais</span>
+          </button>
         </div>
       </div>
+
+      {/* Mobile "Mais" drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              className="lg:hidden fixed inset-0 bg-black/50 z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.div
+              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sidebar rounded-t-3xl pb-8"
+              style={{ boxShadow: "var(--shadow-lg)" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={spring}
+            >
+              <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                <span className="font-semibold text-sm">Mais</span>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="px-3 space-y-1">
+                {[...navItems.slice(4), ...bottomItems].map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "text-foreground bg-sidebar-accent"
+                          : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.label}
+                  </NavLink>
+                ))}
+                <button
+                  onClick={() => { setMobileOpen(false); handleLogout(); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent/50 transition-all duration-200 w-full"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sair
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <main className="flex-1 lg:ml-60 pb-20 lg:pb-0">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +17,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 
 const Estudos = () => {
-  const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes } = useStudy();
-  const { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted } = useSubjects();
+  const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes, isLoading: sessionsLoading } = useStudy();
+  const { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted, isLoading: subjectsLoading } = useSubjects();
+
+  if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
   const [selectedSubject, setSelectedSubject] = useState<string>(subjects[0]?.label || '');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [useTimer, setUseTimer] = useState(true);

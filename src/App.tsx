@@ -22,7 +22,17 @@ import Planos from "./pages/Planos";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Data is considered fresh for 2 minutes — prevents redundant Supabase
+      // round-trips when the user quickly navigates between module pages.
+      staleTime: 2 * 60 * 1000,
+      // Keep inactive query data in cache for 10 minutes after unmount.
+      gcTime: 10 * 60 * 1000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

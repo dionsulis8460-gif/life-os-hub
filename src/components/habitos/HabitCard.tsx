@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Flame, Trash2 } from "lucide-react";
+import { Flame, Pencil, Trash2 } from "lucide-react";
 import { Habit } from "@/types/habit";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,6 +10,7 @@ interface HabitCardProps {
   last7Days: boolean[];
   isCompletedToday: boolean;
   onToggle: (id: string) => void;
+  onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
 }
 
@@ -23,7 +24,7 @@ const DAY_LABELS = () => {
   return labels;
 };
 
-const HabitCard = ({ habit, streak, last7Days, isCompletedToday, onToggle, onDelete }: HabitCardProps) => {
+const HabitCard = ({ habit, streak, last7Days, isCompletedToday, onToggle, onEdit, onDelete }: HabitCardProps) => {
   const days = DAY_LABELS();
 
   return (
@@ -54,12 +55,23 @@ const HabitCard = ({ habit, streak, last7Days, isCompletedToday, onToggle, onDel
             <h3 className={`font-semibold transition-colors ${isCompletedToday ? "text-muted-foreground line-through" : ""}`}>
               {habit.name}
             </h3>
-            <button
-              onClick={() => onDelete(habit.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {/* Edit / Delete actions — visible on hover */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => onEdit(habit)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Editar hábito"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onDelete(habit.id)}
+                className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                aria-label="Excluir hábito"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Streak */}

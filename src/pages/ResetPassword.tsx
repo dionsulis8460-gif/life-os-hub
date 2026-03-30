@@ -16,19 +16,32 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for recovery token in URL hash
-    const hash = window.location.hash;
-    if (hash && hash.includes("type=recovery")) {
+    // Subscribe FIRST so we never miss the PASSWORD_RECOVERY event, regardless
+    // of which auth flow is used (implicit hash or PKCE ?code=).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setReady(true);
+      }
+    });
+
+    // Implicit flow: Supabase appends #access_token=...&type=recovery to the URL.
+    if (window.location.hash.includes("type=recovery")) {
       setReady(true);
-    } else {
-      // Also listen for auth state change from the recovery link
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY") {
+    }
+
+    // PKCE flow: Supabase appends ?code= to the URL and the client exchanges it
+    // asynchronously. If the exchange completed before this effect ran the
+    // PASSWORD_RECOVERY event is already gone, so we fall back to getSession().
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("code")) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
           setReady(true);
         }
       });
-      return () => subscription.unsubscribe();
     }
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

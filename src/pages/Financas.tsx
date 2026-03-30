@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, TrendingUp, TrendingDown, Wallet, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,10 @@ function Financas() {
     deleteTransaction,
     getCategoryName,
     getCategoryIcon,
+    isLoading,
   } = useFinances();
+
+  if (isLoading) return <PageSkeleton rows={4} />;
 
   const formatCurrency = (v: number) =>
     v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

@@ -9,6 +9,7 @@ export interface StudySession {
 }
 
 export interface Topic {
+  id?: string; // set when persisted to Supabase; absent for in-memory / legacy data
   name: string;
   completed: boolean;
 }

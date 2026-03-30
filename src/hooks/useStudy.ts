@@ -1,98 +1,342 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { StudySession, Subject, DEFAULT_SUBJECTS } from '@/types/study';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { StudySession, Subject, Topic, DEFAULT_SUBJECTS } from '@/types/study';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export function useSubjects() {
-  const [subjects, setSubjects] = useState<Subject[]>(() => {
-    const saved = localStorage.getItem('study-subjects');
-    if (saved) {
-      // Migrate old format (topics as string[]) to new format
-      const parsed = JSON.parse(saved);
-      return parsed.map((s: any) => ({
-        ...s,
-        completed: s.completed ?? false,
-        topics: (s.topics || []).map((t: any) =>
-          typeof t === 'string' ? { name: t, completed: false } : t
-        ),
-      }));
-    }
-    return DEFAULT_SUBJECTS;
-  });
+// ─── Helper ──────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    localStorage.setItem('study-subjects', JSON.stringify(subjects));
-  }, [subjects]);
-
-  const addSubject = useCallback((label: string, color: string) => {
-    setSubjects(prev => [...prev, { id: crypto.randomUUID(), label, color, topics: [], completed: false }]);
-  }, []);
-
-  const deleteSubject = useCallback((id: string) => {
-    setSubjects(prev => prev.filter(s => s.id !== id));
-  }, []);
-
-  const toggleSubjectCompleted = useCallback((id: string) => {
-    setSubjects(prev => prev.map(s => {
-      if (s.id !== id) return s;
-      const newCompleted = !s.completed;
-      return {
-        ...s,
-        completed: newCompleted,
-        topics: s.topics.map(t => ({ ...t, completed: newCompleted })),
-      };
-    }));
-  }, []);
-
-  const addTopic = useCallback((subjectId: string, topicName: string) => {
-    setSubjects(prev => prev.map(s =>
-      s.id === subjectId ? { ...s, topics: [...s.topics, { name: topicName, completed: false }], completed: false } : s
-    ));
-  }, []);
-
-  const deleteTopic = useCallback((subjectId: string, topicIndex: number) => {
-    setSubjects(prev => prev.map(s =>
-      s.id === subjectId ? { ...s, topics: s.topics.filter((_, i) => i !== topicIndex) } : s
-    ));
-  }, []);
-
-  const toggleTopicCompleted = useCallback((subjectId: string, topicIndex: number) => {
-    setSubjects(prev => prev.map(s => {
-      if (s.id !== subjectId) return s;
-      const newTopics = s.topics.map((t, i) =>
-        i === topicIndex ? { ...t, completed: !t.completed } : t
-      );
-      const allDone = newTopics.length > 0 && newTopics.every(t => t.completed);
-      return { ...s, topics: newTopics, completed: allDone };
-    }));
-  }, []);
-
-  return { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted };
+function rowToSubject(row: Record<string, unknown>): Subject {
+  const topics = (row.study_topics as Array<Record<string, unknown>> | null) ?? [];
+  return {
+    id: row.id as string,
+    label: row.label as string,
+    color: row.color as string,
+    completed: row.completed as boolean,
+    topics: topics
+      .sort((a, b) => (a.position as number) - (b.position as number))
+      .map((t) => ({
+        id: t.id as string,
+        name: t.name as string,
+        completed: t.completed as boolean,
+      })) as Array<Topic & { id: string }>,
+  };
 }
 
-export function useStudy() {
-  const [sessions, setSessions] = useState<StudySession[]>(() => {
-    const saved = localStorage.getItem('study-sessions');
-    return saved ? JSON.parse(saved) : [];
+// ─── useSubjects ────────────────────────────────────────────────────────────
+
+export function useSubjects() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const KEY = ['study_subjects', user?.id];
+
+  const { data: subjects = [], isLoading: subjectsLoading } = useQuery<Subject[]>({
+    queryKey: KEY,
+    queryFn: async () => {
+      const { data: subs, error: subsError } = await supabase
+        .from('study_subjects')
+        .select('*, study_topics(*)')
+        .eq('user_id', user!.id)
+        .order('position');
+      if (subsError) throw subsError;
+
+      if (!subs || subs.length === 0) {
+        // Seed default subjects for new users
+        const inserts = DEFAULT_SUBJECTS.map((s, i) => ({
+          user_id: user!.id,
+          label: s.label,
+          color: s.color,
+          completed: false,
+          position: i,
+        }));
+        const { data: inserted, error: insertError } = await supabase
+          .from('study_subjects')
+          .insert(inserts)
+          .select('*, study_topics(*)');
+        if (insertError) throw insertError;
+        return (inserted ?? []).map(rowToSubject);
+      }
+
+      return subs.map(rowToSubject);
+    },
+    enabled: !!user,
   });
 
-  useEffect(() => {
-    localStorage.setItem('study-sessions', JSON.stringify(sessions));
-  }, [sessions]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: KEY });
 
-  const addSession = useCallback((session: Omit<StudySession, 'id'>) => {
-    setSessions(prev => [{ ...session, id: crypto.randomUUID() }, ...prev]);
-  }, []);
+  // ─── Add subject ────────────────────────────────────────────────────────────
+  const addSubjectMut = useMutation({
+    mutationFn: async ({ label, color }: { label: string; color: string }) => {
+      const { error } = await supabase.from('study_subjects').insert({
+        user_id: user!.id,
+        label,
+        color,
+        completed: false,
+        position: subjects.length,
+      });
+      if (error) throw error;
+    },
+    onMutate: async ({ label, color }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) => [
+        ...old,
+        { id: crypto.randomUUID(), label, color, completed: false, topics: [] },
+      ]);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
 
-  const deleteSession = useCallback((id: string) => {
-    setSessions(prev => prev.filter(s => s.id !== id));
-  }, []);
+  // ─── Delete subject ─────────────────────────────────────────────────────────
+  const deleteSubjectMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('study_subjects').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) => old.filter((s) => s.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Toggle subject completed ───────────────────────────────────────────────
+  const toggleSubjectMut = useMutation({
+    mutationFn: async (id: string) => {
+      const subject = subjects.find((s) => s.id === id);
+      if (!subject) return;
+      const newCompleted = !subject.completed;
+      const { error } = await supabase
+        .from('study_subjects')
+        .update({ completed: newCompleted })
+        .eq('id', id);
+      if (error) throw error;
+      if (subject.topics.length > 0) {
+        const topicIds = subject.topics
+          .map((t) => (t as Topic & { id?: string }).id)
+          .filter((x): x is string => !!x);
+        if (topicIds.length > 0) {
+          await supabase
+            .from('study_topics')
+            .update({ completed: newCompleted })
+            .in('id', topicIds);
+        }
+      }
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) => {
+          if (s.id !== id) return s;
+          const newCompleted = !s.completed;
+          return {
+            ...s,
+            completed: newCompleted,
+            topics: s.topics.map((t) => ({ ...t, completed: newCompleted })),
+          };
+        })
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Add topic ──────────────────────────────────────────────────────────────
+  const addTopicMut = useMutation({
+    mutationFn: async ({ subjectId, name }: { subjectId: string; name: string }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      const position = subject ? subject.topics.length : 0;
+      const { error } = await supabase
+        .from('study_topics')
+        .insert({ subject_id: subjectId, name, completed: false, position });
+      if (error) throw error;
+    },
+    onMutate: async ({ subjectId, name }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) =>
+          s.id === subjectId
+            ? {
+                ...s,
+                topics: [
+                  ...s.topics,
+                  { id: crypto.randomUUID(), name, completed: false },
+                ],
+              }
+            : s
+        )
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Delete topic ───────────────────────────────────────────────────────────
+  const deleteTopicMut = useMutation({
+    mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      if (!subject) return;
+      const topic = subject.topics[topicIndex] as Topic & { id?: string };
+      if (!topic?.id) return;
+      const { error } = await supabase.from('study_topics').delete().eq('id', topic.id);
+      if (error) throw error;
+    },
+    onMutate: async ({ subjectId, topicIndex }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) =>
+          s.id === subjectId
+            ? { ...s, topics: s.topics.filter((_, i) => i !== topicIndex) }
+            : s
+        )
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  // ─── Toggle topic completed ─────────────────────────────────────────────────
+  const toggleTopicMut = useMutation({
+    mutationFn: async ({ subjectId, topicIndex }: { subjectId: string; topicIndex: number }) => {
+      const subject = subjects.find((s) => s.id === subjectId);
+      if (!subject) return;
+      const topic = subject.topics[topicIndex] as Topic & { id?: string };
+      if (!topic?.id) return;
+      const newCompleted = !topic.completed;
+      const { error } = await supabase
+        .from('study_topics')
+        .update({ completed: newCompleted })
+        .eq('id', topic.id);
+      if (error) throw error;
+      const newTopics = subject.topics.map((t, i) =>
+        i === topicIndex ? { ...t, completed: newCompleted } : t
+      );
+      const allDone = newTopics.length > 0 && newTopics.every((t) => t.completed);
+      if (allDone !== subject.completed) {
+        await supabase.from('study_subjects').update({ completed: allDone }).eq('id', subjectId);
+      }
+    },
+    onMutate: async ({ subjectId, topicIndex }) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<Subject[]>(KEY);
+      queryClient.setQueryData<Subject[]>(KEY, (old = []) =>
+        old.map((s) => {
+          if (s.id !== subjectId) return s;
+          const newTopics = s.topics.map((t, i) =>
+            i === topicIndex ? { ...t, completed: !t.completed } : t
+          );
+          const allDone = newTopics.length > 0 && newTopics.every((t) => t.completed);
+          return { ...s, topics: newTopics, completed: allDone };
+        })
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: invalidate,
+  });
+
+  return {
+    subjects,
+    isLoading: subjectsLoading,
+    addSubject: (label: string, color: string) => addSubjectMut.mutate({ label, color }),
+    deleteSubject: (id: string) => deleteSubjectMut.mutate(id),
+    toggleSubjectCompleted: (id: string) => toggleSubjectMut.mutate(id),
+    addTopic: (subjectId: string, name: string) => addTopicMut.mutate({ subjectId, name }),
+    deleteTopic: (subjectId: string, topicIndex: number) =>
+      deleteTopicMut.mutate({ subjectId, topicIndex }),
+    toggleTopicCompleted: (subjectId: string, topicIndex: number) =>
+      toggleTopicMut.mutate({ subjectId, topicIndex }),
+  };
+}
+
+// ─── useStudy ────────────────────────────────────────────────────────────────
+
+export function useStudy() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const KEY = ['study_sessions', user?.id];
+
+  const { data: sessions = [], isLoading: sessionsLoading } = useQuery<StudySession[]>({
+    queryKey: KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('study_sessions')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        id: r.id,
+        subject: r.subject,
+        topic: r.topic ?? undefined,
+        duration: r.duration,
+        date: r.date,
+        type: r.type as StudySession['type'],
+        completedPomodoros: r.completed_pomodoros,
+      }));
+    },
+    enabled: !!user,
+  });
+
+  const addSessionMut = useMutation({
+    mutationFn: async (session: Omit<StudySession, 'id'>) => {
+      const { error } = await supabase.from('study_sessions').insert({
+        user_id: user!.id,
+        subject: session.subject,
+        topic: session.topic ?? null,
+        duration: session.duration,
+        date: session.date,
+        type: session.type,
+        completed_pomodoros: session.completedPomodoros ?? 0,
+      });
+      if (error) throw error;
+    },
+    onMutate: async (session) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<StudySession[]>(KEY);
+      queryClient.setQueryData<StudySession[]>(KEY, (old = []) => [
+        { ...session, id: crypto.randomUUID() },
+        ...old,
+      ]);
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
+
+  const deleteSessionMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('study_sessions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const prev = queryClient.getQueryData<StudySession[]>(KEY);
+      queryClient.setQueryData<StudySession[]>(KEY, (old = []) => old.filter((s) => s.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: KEY }),
+  });
 
   const today = new Date();
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-  const weekSessions = sessions.filter(s => {
+  const weekSessions = sessions.filter((s) => {
     const d = parseISO(s.date);
     return isWithinInterval(d, { start: weekStart, end: weekEnd });
   });
@@ -104,7 +348,7 @@ export function useStudy() {
     const day = subDays(today, 6 - i);
     const dayStr = format(day, 'yyyy-MM-dd');
     const mins = sessions
-      .filter(s => s.date.startsWith(dayStr))
+      .filter((s) => s.date.startsWith(dayStr))
       .reduce((sum, s) => sum + s.duration, 0);
     return {
       day: format(day, 'EEE', { locale: ptBR }),
@@ -114,11 +358,23 @@ export function useStudy() {
 
   const todayStr = format(today, 'yyyy-MM-dd');
   const todayMinutes = sessions
-    .filter(s => s.date.startsWith(todayStr))
+    .filter((s) => s.date.startsWith(todayStr))
     .reduce((sum, s) => sum + s.duration, 0);
 
-  return { sessions, addSession, deleteSession, weekSessions, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes };
+  return {
+    isLoading: sessionsLoading,
+    sessions,
+    addSession: (session: Omit<StudySession, 'id'>) => addSessionMut.mutate(session),
+    deleteSession: (id: string) => deleteSessionMut.mutate(id),
+    weekSessions,
+    totalWeekMinutes,
+    totalPomodoros,
+    dailyData,
+    todayMinutes,
+  };
 }
+
+// ─── usePomodoro (timer only — no Supabase) ──────────────────────────────────
 
 export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
   const [workMinutes, setWorkMinutes] = useState(initialWorkMinutes);
@@ -134,10 +390,10 @@ export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
   useEffect(() => {
     if (isRunning) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
+        setTimeLeft((prev) => {
           if (prev <= 1) {
             if (!isBreak) {
-              setCompletedPomodoros(p => p + 1);
+              setCompletedPomodoros((p) => p + 1);
               setIsBreak(true);
               return breakMinutes * 60;
             } else {
@@ -154,7 +410,7 @@ export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
     };
   }, [isRunning, isBreak, workMinutes, breakMinutes]);
 
-  const toggle = useCallback(() => setIsRunning(r => !r), []);
+  const toggle = useCallback(() => setIsRunning((r) => !r), []);
   const reset = useCallback(() => {
     setIsRunning(false);
     setIsBreak(false);
@@ -162,16 +418,31 @@ export function usePomodoro(initialWorkMinutes = 25, breakMinutes = 5) {
     setCompletedPomodoros(0);
   }, [workMinutes]);
 
-  const changeWorkMinutes = useCallback((mins: number) => {
-    setWorkMinutes(mins);
-    if (!isRunning && !isBreak) {
-      setTimeLeft(mins * 60);
-    }
-  }, [isRunning, isBreak]);
+  const changeWorkMinutes = useCallback(
+    (mins: number) => {
+      setWorkMinutes(mins);
+      if (!isRunning && !isBreak) {
+        setTimeLeft(mins * 60);
+      }
+    },
+    [isRunning, isBreak]
+  );
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  return { display, isRunning, isBreak, toggle, reset, progress, completedPomodoros, timeLeft, totalSeconds, workMinutes, changeWorkMinutes };
+  return {
+    display,
+    isRunning,
+    isBreak,
+    toggle,
+    reset,
+    progress,
+    completedPomodoros,
+    timeLeft,
+    totalSeconds,
+    workMinutes,
+    changeWorkMinutes,
+  };
 }

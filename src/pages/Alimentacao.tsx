@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
+import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Flame, Beef, Wheat, Droplets, Trash2 } from "lucide-react";
@@ -12,8 +13,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 
 const Alimentacao = () => {
-  const { meals, addMeal, deleteMeal, todayMeals, todayCalories, todayProtein, todayCarbs, todayFat, dailyData } = useMeals();
+  const { meals, addMeal, deleteMeal, todayMeals, todayCalories, todayProtein, todayCarbs, todayFat, dailyData, isLoading } = useMeals();
   const [showDialog, setShowDialog] = useState(false);
+
+  if (isLoading) return <PageSkeleton rows={3} />;
 
   const handleAdd = (data: Parameters<typeof addMeal>[0] extends infer T ? Omit<T, 'id' | 'date'> : never) => {
     addMeal({ ...data, date: new Date().toISOString() });
