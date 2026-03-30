@@ -24,7 +24,6 @@ type FilterPriority = "all" | Priority;
 const Rotina = () => {
   const { tasks, addTask, updateTask, deleteTask, toggleDone, isLoading } = useTasks();
 
-  if (isLoading) return <PageSkeleton rows={5} />;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -67,6 +66,8 @@ const Rotina = () => {
     setEditingTask(null);
     setDialogOpen(true);
   };
+
+  if (isLoading) return <PageSkeleton rows={5} />;
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ModuleGate from "@/components/layout/ModuleGate";
 import { PageSkeleton } from "@/components/layout/PageSkeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +20,7 @@ const Estudos = () => {
   const { sessions, addSession, deleteSession, totalWeekMinutes, totalPomodoros, dailyData, todayMinutes, isLoading: sessionsLoading } = useStudy();
   const { subjects, addSubject, deleteSubject, addTopic, deleteTopic, toggleSubjectCompleted, toggleTopicCompleted, isLoading: subjectsLoading } = useSubjects();
 
-  if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
-  const [selectedSubject, setSelectedSubject] = useState<string>(subjects[0]?.label || '');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedTopic, setSelectedTopic] = useState<string>('');
   const [useTimer, setUseTimer] = useState(true);
   const pomodoro = usePomodoro(25, 5);
@@ -38,6 +37,15 @@ const Estudos = () => {
 
   // Free session tracking
   const [freeSessionMinutes, setFreeSessionMinutes] = useState('');
+
+  // Default to first subject once subjects finish loading
+  useEffect(() => {
+    if (!subjectsLoading && selectedSubject === '' && subjects.length > 0) {
+      setSelectedSubject(subjects[0].label);
+    }
+  }, [subjectsLoading, subjects, selectedSubject]);
+
+  if (sessionsLoading || subjectsLoading) return <PageSkeleton rows={4} />;
 
   const currentSubject = subjects.find(s => s.label === selectedSubject);
   const currentTopics = currentSubject?.topics || [];
