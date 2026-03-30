@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
@@ -17,6 +17,12 @@ interface ModuleGateProps {
 
 const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
   const { hasModuleAccess, isLoading, isError, subscription, isTrialActive, isLimitedFreeActive, limitedFreeDaysLeft, refetch } = useSubscription();
+
+  // In local-dev mode (Supabase not configured), bypass all subscription checks
+  // so every module is accessible without a backend connection.
+  if (!isSupabaseConfigured) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

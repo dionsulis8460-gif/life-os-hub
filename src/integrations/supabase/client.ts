@@ -25,7 +25,10 @@ function fetchWithTimeout(
   const controller = new AbortController();
   const timerId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  // Merge with the caller's AbortSignal when the browser supports it.
+  // Merge with the caller's AbortSignal when the browser supports AbortSignal.any
+  // (Chrome 116+, Firefox 118+, Safari 17.4+). On older browsers the caller's
+  // signal is ignored — the timeout signal still fires after FETCH_TIMEOUT_MS,
+  // so requests don't hang, but early cancellation by the caller won't work.
   const callerSignal = init?.signal as AbortSignal | undefined;
   const signal =
     callerSignal && "any" in AbortSignal
@@ -34,6 +37,17 @@ function fetchWithTimeout(
 
   return fetch(input, { ...init, signal }).finally(() => clearTimeout(timerId));
 }
+
+/**
+ * When Supabase env vars are missing or still hold placeholder values,
+ * all Supabase queries will fail immediately instead of hanging.
+ * Components can use this flag to skip subscription checks in local-dev mode.
+ */
+export const isSupabaseConfigured =
+  !!SUPABASE_URL &&
+  !!SUPABASE_PUBLISHABLE_KEY &&
+  !SUPABASE_URL.includes("your_project_ref") &&
+  !SUPABASE_PUBLISHABLE_KEY.includes("your_supabase_anon_key");
 
 /**
  * On iOS / Android, Capacitor's Preferences plugin (backed by NSUserDefaults on

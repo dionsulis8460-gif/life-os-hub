@@ -17,6 +17,9 @@ import {
 import { useState } from "react";
 import TrialAlertBanner from "./TrialAlertBanner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import ModuleGuide from "@/components/onboarding/ModuleGuide";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -39,6 +42,7 @@ const AppLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { state: onboarding, completeWizard, skipWizard, markModuleVisited, isModuleVisited } = useOnboarding();
 
   const handleLogout = async () => {
     await signOut();
@@ -206,6 +210,16 @@ const AppLayout = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Onboarding wizard — shown to first-time users */}
+      {!onboarding.wizardCompleted && (
+        <OnboardingWizard onComplete={completeWizard} onSkip={skipWizard} />
+      )}
+
+      {/* Per-module guide — shown on first visit to each module */}
+      {onboarding.wizardCompleted && (
+        <ModuleGuide isModuleVisited={isModuleVisited} markModuleVisited={markModuleVisited} />
+      )}
     </div>
   );
 };
