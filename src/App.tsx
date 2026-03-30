@@ -36,6 +36,8 @@ const queryClient = new QueryClient({
       retryDelay: 1000,
       // Always attempt queries regardless of navigator.onLine so pages load
       // even when the browser incorrectly reports the device as offline.
+      // Trade-off: users who are genuinely offline will see error/stale states
+      // rather than the "offline" placeholder React Query normally shows.
       networkMode: "always",
     },
   },

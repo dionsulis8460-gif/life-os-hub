@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import { FlaskConical } from "lucide-react";
 
 const spring = { type: "spring" as const, duration: 0.4, bounce: 0 };
 
@@ -14,6 +16,14 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { signIn, signInWithOAuth } = useAuth();
   const navigate = useNavigate();
+
+  // In local demo mode, the AuthContext has already set a fake user, so
+  // navigating to /app is enough — no credentials required.
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      navigate("/app", { replace: true });
+    }
+  }, [navigate]);
 
   // Detect OAuth errors returned via URL hash (e.g. provider not configured,
   // redirect URL not whitelisted, or user denied access).
@@ -88,6 +98,22 @@ const Login = () => {
           <h1 className="text-2xl font-bold mb-2">Bem-vindo de volta</h1>
           <p className="text-muted-foreground text-sm">Entre na sua conta para continuar.</p>
         </div>
+
+        {/* Demo mode banner — shown while the auto-redirect happens */}
+        {!isSupabaseConfigured && (
+          <motion.div
+            className="rounded-2xl bg-primary/10 border border-primary/20 p-4 mb-4 flex items-center gap-3"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={spring}
+          >
+            <FlaskConical className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Modo Demo (sem Supabase)</p>
+              <p className="text-xs text-muted-foreground">Redirecionando para o app…</p>
+            </div>
+          </motion.div>
+        )}
 
         <form onSubmit={handleSubmit} className="rounded-3xl bg-card p-6 shadow-card space-y-4">
           <div>

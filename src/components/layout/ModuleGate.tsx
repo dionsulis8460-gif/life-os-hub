@@ -35,7 +35,7 @@ const ModuleGate = ({ module, moduleName, children }: ModuleGateProps) => {
   // If the subscription check failed AND there is no cached data, show a
   // retry prompt instead of a false "module locked" screen. When stale data
   // is still available (subscription !== undefined), fall through to the
-  // normal hasModuleAccess check so existing cached status is honoured.
+  // normal hasModuleAccess check so existing cached status is honored.
   if (isError && !subscription) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">

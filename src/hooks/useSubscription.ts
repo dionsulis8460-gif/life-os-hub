@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useRef } from "react";
 
@@ -23,6 +23,39 @@ export const useSubscription = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const transitionAttempted = useRef(false);
+
+  // In local demo mode, return a full active subscription so every module
+  // is unlocked and no trial/subscription banners are shown.
+  if (!isSupabaseConfigured) {
+    const mockSub: Subscription = {
+      id: "local-demo-subscription",
+      user_id: "local-demo-user",
+      status: "active",
+      plan: "full",
+      selected_modules: [],
+      store: null,
+      store_transaction_id: null,
+      store_product_id: null,
+      trial_started_at: new Date().toISOString(),
+      trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      limited_free_ends_at: null,
+      current_period_start: null,
+      current_period_end: null,
+    };
+    return {
+      subscription: mockSub,
+      isLoading: false,
+      isError: false,
+      isTrialActive: false,
+      isActive: true,
+      isFullPlan: true,
+      isLimitedFreeActive: false,
+      hasModuleAccess: () => true,
+      trialDaysLeft: 0,
+      limitedFreeDaysLeft: 0,
+      refetch: async () => ({ data: mockSub }),
+    };
+  }
 
   const { data: subscription, isLoading, isError, refetch } = useQuery({
     queryKey: ["subscription", user?.id],

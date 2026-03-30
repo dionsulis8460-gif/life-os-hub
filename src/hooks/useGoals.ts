@@ -1,7 +1,9 @@
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Goal, Milestone } from '@/types/goal';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
+import { localRead, localWrite } from '@/lib/local-store';
 
 type GoalRow = {
   id: string;
@@ -43,10 +45,16 @@ export function useGoals() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const KEY = ['goals', user?.id];
+  const isLocal = !isSupabaseConfigured;
+  const LKEY = STORAGE_KEYS.goals;
+
+  const persist = () =>
+    localWrite(LKEY, queryClient.getQueryData<Goal[]>(KEY) ?? []);
 
   const { data: goals = [], isLoading, isError } = useQuery<Goal[]>({
     queryKey: KEY,
     queryFn: async () => {
+      if (isLocal) return localRead<Goal>(LKEY);
       const { data, error } = await supabase
         .from('goals')
         .select('*, milestones(*)')
@@ -55,7 +63,7 @@ export function useGoals() {
       if (error) throw error;
       return (data as GoalRow[]).map(rowToGoal);
     },
-    enabled: !!user,
+    enabled: isLocal || !!user,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: KEY });
@@ -63,6 +71,7 @@ export function useGoals() {
   // ─── Add goal ────────────────────────────────────────────────────────────────
   const addGoalMut = useMutation({
     mutationFn: async (goal: Omit<Goal, 'id' | 'createdAt' | 'completed' | 'milestones'>) => {
+      if (isLocal) return;
       const { error } = await supabase
         .from('goals')
         .insert({ ...goal, user_id: user!.id, completed: false });
@@ -84,12 +93,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Delete goal ─────────────────────────────────────────────────────────────
   const deleteGoalMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const { error } = await supabase.from('goals').delete().eq('id', id);
       if (error) throw error;
     },
@@ -100,12 +111,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Update progress ─────────────────────────────────────────────────────────
   const updateProgressMut = useMutation({
     mutationFn: async ({ id, progress }: { id: string; progress: number }) => {
+      if (isLocal) return;
       const clamped = Math.min(100, Math.max(0, progress));
       const { error } = await supabase
         .from('goals')
@@ -123,12 +136,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Toggle complete ──────────────────────────────────────────────────────────
   const toggleCompleteMut = useMutation({
     mutationFn: async (id: string) => {
+      if (isLocal) return;
       const goal = goals.find((g) => g.id === id);
       if (!goal) return;
       const newCompleted = !goal.completed;
@@ -152,12 +167,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Add milestone ────────────────────────────────────────────────────────────
   const addMilestoneMut = useMutation({
     mutationFn: async ({ goalId, title }: { goalId: string; title: string }) => {
+      if (isLocal) return;
       const goal = goals.find((g) => g.id === goalId);
       const position = goal ? goal.milestones.length : 0;
       const { error } = await supabase
@@ -184,12 +201,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Toggle milestone ─────────────────────────────────────────────────────────
   const toggleMilestoneMut = useMutation({
     mutationFn: async ({ goalId, milestoneId }: { goalId: string; milestoneId: string }) => {
+      if (isLocal) return;
       const goal = goals.find((g) => g.id === goalId);
       if (!goal) return;
       const milestone = goal.milestones.find((m) => m.id === milestoneId);
@@ -200,7 +219,7 @@ export function useGoals() {
         .update({ completed: newCompleted })
         .eq('id', milestoneId);
       if (error) throw error;
-      // Recompute goal progress
+      // Recompute goal progress based on updated milestone state.
       const newMilestones = goal.milestones.map((m) =>
         m.id === milestoneId ? { ...m, completed: newCompleted } : m
       );
@@ -234,12 +253,14 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
   // ─── Delete milestone ─────────────────────────────────────────────────────────
   const deleteMilestoneMut = useMutation({
     mutationFn: async ({ milestoneId }: { goalId: string; milestoneId: string }) => {
+      if (isLocal) return;
       const { error } = await supabase.from('milestones').delete().eq('id', milestoneId);
       if (error) throw error;
     },
@@ -256,6 +277,7 @@ export function useGoals() {
       return { prev };
     },
     onError: (_e, _v, ctx) => queryClient.setQueryData(KEY, ctx?.prev),
+    onSuccess: () => { if (isLocal) persist(); },
     onSettled: invalidate,
   });
 
